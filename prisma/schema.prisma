@@ -1,0 +1,63 @@
+// Sideline Social Studio — multi-tenant schema.
+// Each Event is a tenant with its own clubs, backgrounds, and branding.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  shortName String
+  hashtag   String
+  season    String
+  startDate DateTime?
+  venue     String?
+  organizer String   @default("Sideline")
+
+  // Branding
+  brandColor String  @default("#e83a48")
+  logoUrl    String?
+
+  // Which of the code-defined templates are enabled for this event.
+  enabledTemplates String[] @default(["were-in", "champions", "matchday", "schedule", "result", "countdown"])
+
+  published Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clubs       Club[]
+  backgrounds Background[]
+
+  @@index([published])
+}
+
+model Club {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name      String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
+}
+
+model Background {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  label     String
+  kind      String   @default("gradient") // "gradient" | "image"
+  value     String   // CSS gradient string OR image URL
+  sortOrder Int      @default(0)
+
+  @@index([eventId])
+}

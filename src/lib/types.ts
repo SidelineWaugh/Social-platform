@@ -13,6 +13,32 @@ export interface Club {
   name: string;
 }
 
+/** Per-event branding + metadata handed to the studio (from the DB). */
+export interface EventBrand {
+  slug: string;
+  name: string;
+  shortName: string;
+  hashtag: string;
+  season: string;
+  organizer: string;
+  brandColor: string;
+  logoUrl: string | null;
+  startDateIso: string | null; // yyyy-mm-dd, for the countdown default
+  enabledTemplates: TemplateId[];
+}
+
+export interface ClubData {
+  id: string;
+  name: string;
+}
+
+export interface BackgroundData {
+  id: string;
+  label: string;
+  kind: "gradient" | "image";
+  value: string; // CSS gradient string OR image URL
+}
+
 /** One game row used by the schedule template. */
 export interface GameRow {
   opponent: string;

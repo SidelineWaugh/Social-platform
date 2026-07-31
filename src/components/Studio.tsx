@@ -6,6 +6,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
   type RefObject,
 } from "react";
@@ -13,38 +14,49 @@ import { toPng } from "html-to-image";
 import { GraphicCanvas } from "./GraphicCanvas";
 import { Controls } from "./Controls";
 import { FORMAT_MAP } from "@/lib/formats";
-import { EVENT } from "@/lib/event";
-import type { GraphicState } from "@/lib/types";
+import type {
+  GraphicState,
+  EventBrand,
+  ClubData,
+  BackgroundData,
+  TemplateId,
+} from "@/lib/types";
 
-const initialState: GraphicState = {
-  template: "were-in",
-  format: "portrait",
-  clubName: "",
-  backgroundId: "venue",
-  uploadedImage: null,
-  ageGroup: "U14 Boys Elite",
-  opponent: "",
-  kickoff: "Fri · 10:00 AM",
-  field: "Field 3",
-  ourScore: "3",
-  theirScore: "1",
-  championTitle: "Division Champions",
-  games: [
-    { opponent: "", detail: "Fri 10:00 AM · Field 3" },
-    { opponent: "", detail: "Sat 8:00 AM · Field 1" },
-    { opponent: "", detail: "Sun 12:00 PM · Field 5" },
-  ],
-  targetDate: EVENT.startDate,
-  countdownLabel: "Kickoff",
-};
+export function Studio({
+  event,
+  clubs,
+  backgrounds,
+}: {
+  event: EventBrand;
+  clubs: ClubData[];
+  backgrounds: BackgroundData[];
+}) {
+  const [state, setState] = useState<GraphicState>(() => ({
+    template: (event.enabledTemplates[0] ?? "were-in") as TemplateId,
+    format: "portrait",
+    clubName: "",
+    backgroundId: backgrounds[0]?.id ?? "none",
+    uploadedImage: null,
+    ageGroup: "U14 Boys Elite",
+    opponent: "",
+    kickoff: "Fri · 10:00 AM",
+    field: "Field 3",
+    ourScore: "3",
+    theirScore: "1",
+    championTitle: "Division Champions",
+    games: [
+      { opponent: "", detail: "Fri 10:00 AM · Field 3" },
+      { opponent: "", detail: "Sat 8:00 AM · Field 1" },
+      { opponent: "", detail: "Sun 12:00 PM · Field 5" },
+    ],
+    targetDate: event.startDateIso ?? "",
+    countdownLabel: "Kickoff",
+  }));
 
-export function Studio() {
-  const [state, setState] = useState<GraphicState>(initialState);
   const [today, setToday] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const captureRef = useRef<HTMLDivElement>(null);
 
-  // Set after mount to keep the countdown SSR-safe.
   useEffect(() => setToday(new Date().toISOString().slice(0, 10)), []);
 
   const update = useCallback(
@@ -71,7 +83,7 @@ export function Studio() {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "");
       const a = document.createElement("a");
-      a.download = `${EVENT.shortName.toLowerCase().replace(/\s+/g, "-")}-${state.template}-${slug}.png`;
+      a.download = `${event.shortName.toLowerCase().replace(/\s+/g, "-")}-${state.template}-${slug}.png`;
       a.href = dataUrl;
       a.click();
     } catch (err) {
@@ -82,12 +94,23 @@ export function Studio() {
     }
   };
 
+  // Theme the studio chrome (buttons/borders) to the event's brand color.
+  const brandStyle = { ["--color-brand"]: event.brandColor } as CSSProperties;
+
   return (
-    <div className="mx-auto grid max-w-[1240px] gap-6 px-4 py-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:px-6">
+    <div
+      style={brandStyle}
+      className="mx-auto grid max-w-[1240px] gap-6 px-4 py-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:px-6"
+    >
       {/* Live preview */}
       <div className="lg:sticky lg:top-24 lg:self-start">
         <PreviewStage width={fmt.width} height={fmt.height} captureRef={captureRef}>
-          <GraphicCanvas state={state} today={today} />
+          <GraphicCanvas
+            event={event}
+            backgrounds={backgrounds}
+            state={state}
+            today={today}
+          />
         </PreviewStage>
 
         <div className="mt-5 flex flex-col items-center gap-2">
@@ -95,7 +118,7 @@ export function Studio() {
             type="button"
             onClick={download}
             disabled={downloading}
-            className="inline-flex items-center gap-2 rounded-full bg-brand px-7 py-3 font-cond text-[15px] font-bold uppercase tracking-[0.14em] text-white shadow-[0_12px_30px_-10px_rgba(232,58,72,0.9)] transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-full bg-brand px-7 py-3 font-cond text-[15px] font-bold uppercase tracking-[0.14em] text-white shadow-[0_12px_30px_-10px_rgba(232,58,72,0.9)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {downloading ? "Rendering…" : "⬇  Download graphic"}
           </button>
@@ -107,7 +130,13 @@ export function Studio() {
 
       {/* Controls */}
       <div className="thin-scroll lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pr-1">
-        <Controls state={state} update={update} />
+        <Controls
+          state={state}
+          update={update}
+          event={event}
+          clubs={clubs}
+          backgrounds={backgrounds}
+        />
       </div>
     </div>
   );
@@ -160,9 +189,7 @@ function PreviewStage({
           boxShadow: "0 34px 70px -28px rgba(0,0,0,0.8)",
         }}
       >
-        <div
-          style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}
-        >
+        <div style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
           <div ref={captureRef} style={{ width, height }}>
             {children}
           </div>

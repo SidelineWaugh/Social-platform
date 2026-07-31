@@ -12,11 +12,9 @@ import "@fontsource/inter/600.css";
 import "@fontsource/inter/700.css";
 import "@fontsource/inter/800.css";
 
-import { EVENT } from "@/lib/event";
-
 export const metadata: Metadata = {
-  title: `${EVENT.name} — Social Studio`,
-  description: `Create and share branded graphics for ${EVENT.name}.`,
+  title: "Sideline Social Studio",
+  description: "Create and share branded graphics for your event.",
 };
 
 export default function RootLayout({

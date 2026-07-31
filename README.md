@@ -1,65 +1,96 @@
 # Sideline Social Studio
 
-A branded **social-graphic generator** for tournaments and events. Clubs (or
-attendees) pick a template, drop in their details, and download a
-ready-to-post graphic — every share doubles as free marketing for the event.
+A **multi-event** platform for creating branded, shareable social graphics.
+Each event (a tournament, league, or one-off) is its own tenant with its own
+clubs, backgrounds, and branding, served at its own URL. Clubs pick a template,
+add their details, and download a ready-to-post graphic — every share doubles as
+free marketing for the event.
 
-Built for Sideline's events and designed to be re-skinned per event. Modeled
-on the Chicago International Cup studio.
+Built for Sideline's events and designed to be resold to smaller events.
 
-## What it does
+## How it works
 
-Six templates, each rendered as a live, downloadable graphic:
+- **Public landing** (`/`) — lists all published event studios.
+- **Event studio** (`/[slug]`, e.g. `/chicago-cup`) — the generator, themed to
+  that event's brand color, with its own clubs and backgrounds. Six templates:
+  We're In · Champions · Matchday · Schedule · Result · Countdown. Exports
+  1080-wide PNGs (Post 4:5, Square 1:1, Story 9:16) entirely in the browser.
+- **Admin** (`/admin`) — password-gated dashboard to create and manage events:
+  branding, dates, enabled templates, clubs (single or bulk), backgrounds
+  (gradient presets or image URLs), and publish/unpublish.
 
-| Template   | Use                                   |
-| ---------- | ------------------------------------- |
-| We're In   | Announce the club is competing        |
-| Champions  | Celebrate a division / bracket win    |
-| Matchday   | Hype the next game (vs / time / field)|
-| Schedule   | Share the group-stage fixtures        |
-| Result     | Post the final score (auto W/D/L)     |
-| Countdown  | Days-to-kickoff, computed from a date |
+## Stack — everything runs on Railway
 
-Plus: club picker (list + manual entry), preset **and** custom-photo
-backgrounds, and three export formats — Post (4:5), Square (1:1), Story (9:16).
-Graphics export as **1080-wide PNGs** entirely in the browser (no server).
-
-## Tech
-
-- **Next.js 16** (App Router) + **React 19** + **TypeScript**
-- **Tailwind CSS v4** design tokens (dark navy / Chicago-red system)
-- Self-hosted fonts via `@fontsource` (Anton / Saira Condensed / Inter) — no
-  external Google Fonts request at build or runtime
+- **Next.js 16** (App Router, Server Actions) + **React 19** + **TypeScript**
+- **Prisma 6 + PostgreSQL** (one Railway Postgres database)
+- **Tailwind CSS v4**; per-event theming via a `--color-brand` CSS variable
+- Self-hosted fonts via `@fontsource` (no external Google Fonts request)
 - `html-to-image` for client-side PNG export
+- Admin auth: shared password (`ADMIN_PASSWORD`) → HMAC-signed session cookie
 
-## Develop
+## Environment variables
+
+| Variable         | Purpose                                             |
+| ---------------- | --------------------------------------------------- |
+| `DATABASE_URL`   | Postgres connection string                          |
+| `ADMIN_PASSWORD` | Password for the `/admin` dashboard                 |
+| `SESSION_SECRET` | Long random string used to sign the session cookie  |
+
+See `.env.example`.
+
+## Local development
+
+Requires Node 20+ and a local Postgres.
 
 ```bash
 npm install
-npm run dev      # http://localhost:3000
-npm run build    # production build
+cp .env.example .env         # then set DATABASE_URL / ADMIN_PASSWORD / SESSION_SECRET
+npx prisma migrate dev       # create the schema
+npm run db:seed              # seed the Chicago International Cup event
+npm run dev                  # http://localhost:3000
 ```
 
-Deploys to Vercel with zero config.
+- `/` — event list · `/chicago-cup` — studio · `/admin` — dashboard.
 
-## Reuse for another event
+## Deploy to Railway
 
-The studio is data-driven — reskinning it for a different Sideline event does
-not require touching component code:
+1. **New Project → Deploy from GitHub repo** (this repo).
+2. **Add a Postgres database** to the project (Railway → *New* → *Database* → *PostgreSQL*).
+3. On the app service, set variables:
+   - `DATABASE_URL = ${{Postgres.DATABASE_URL}}`
+   - `ADMIN_PASSWORD = <your password>`
+   - `SESSION_SECRET = <long random string>`
+4. Deploy. `railway.json` runs `prisma migrate deploy` on each release before
+   starting the server, so the schema stays in sync automatically.
+5. Seed the first event once (from your machine, against the Railway DB):
+   ```bash
+   railway run npm run db:seed
+   ```
+   …or just create events in `/admin`.
 
-- **`src/lib/event.ts`** — event name, hashtag, season, dates, organizer.
-- **`src/lib/clubs.ts`** — the list of participating clubs.
-- **`src/lib/backgrounds.ts`** — background presets. These currently ship as
-  gradient stand-ins; drop real venue photos into `public/` and point each
-  preset's `css` at `url(/backgrounds/...)` for the production look.
-- **`src/app/globals.css`** — brand colors (`--color-brand`, surfaces) if the
-  event needs a different palette.
+The build (`prisma generate && next build`) and start
+(`prisma migrate deploy && next start`) are already wired for Railway's Nixpacks
+builder.
+
+## Data model (`prisma/schema.prisma`)
+
+- **Event** — tenant: slug, name, branding (`brandColor`, `logoUrl`), season,
+  `startDate`, `hashtag`, `enabledTemplates`, `published`.
+- **Club** — belongs to an Event (the studio's club picker).
+- **Background** — belongs to an Event: `gradient` (CSS) or `image` (URL).
+
+Templates and export formats are defined in code (`src/lib/templates.ts`,
+`src/lib/formats.ts`); everything else is per-event data.
 
 ## Project layout
 
 ```
+prisma/           schema, migrations, seed
 src/
-  app/            layout, page shell, global styles
+  app/
+    page.tsx              landing (event list)
+    [slug]/page.tsx       public event studio
+    admin/                login, dashboard, event editor, server actions
   components/     Studio (state + preview), Controls, GraphicCanvas (renderer)
-  lib/            event config, clubs, templates, backgrounds, formats, types
+  lib/            db, auth, queries, templates, formats, types
 ```

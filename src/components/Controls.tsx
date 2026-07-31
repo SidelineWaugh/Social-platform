@@ -1,28 +1,33 @@
 "use client";
 
 import { useId, useRef, useState, type ReactNode } from "react";
-import type { GraphicState } from "@/lib/types";
+import type {
+  GraphicState,
+  EventBrand,
+  ClubData,
+  BackgroundData,
+} from "@/lib/types";
 import { TEMPLATES } from "@/lib/templates";
-import { CLUBS } from "@/lib/clubs";
-import { BACKGROUNDS } from "@/lib/backgrounds";
 import { FORMATS } from "@/lib/formats";
 
 type Update = (patch: Partial<GraphicState>) => void;
 
-export function Controls({
-  state,
-  update,
-}: {
+interface SectionProps {
   state: GraphicState;
   update: Update;
-}) {
+  event: EventBrand;
+  clubs: ClubData[];
+  backgrounds: BackgroundData[];
+}
+
+export function Controls(props: SectionProps) {
   return (
     <div className="flex flex-col gap-4">
-      <TemplateSection state={state} update={update} />
-      <ClubSection state={state} update={update} />
-      <BackgroundSection state={state} update={update} />
-      <DetailsSection state={state} update={update} />
-      <FormatSection state={state} update={update} />
+      <TemplateSection {...props} />
+      <ClubSection {...props} />
+      <BackgroundSection {...props} />
+      <DetailsSection {...props} />
+      <FormatSection {...props} />
     </div>
   );
 }
@@ -38,13 +43,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
       <span className="label mb-1.5 block text-ink-faint!">{label}</span>
@@ -60,11 +59,12 @@ const inputClass =
 
 /* ------------------------------- template ------------------------------- */
 
-function TemplateSection({ state, update }: { state: GraphicState; update: Update }) {
+function TemplateSection({ state, update, event }: SectionProps) {
+  const enabled = TEMPLATES.filter((t) => event.enabledTemplates.includes(t.id));
   return (
     <Section title="Template">
       <div className="grid grid-cols-3 gap-2.5">
-        {TEMPLATES.map((t) => {
+        {enabled.map((t) => {
           const active = state.template === t.id;
           return (
             <button
@@ -92,8 +92,8 @@ function TemplateSection({ state, update }: { state: GraphicState; update: Updat
 
 /* --------------------------------- club --------------------------------- */
 
-function ClubSection({ state, update }: { state: GraphicState; update: Update }) {
-  const known = CLUBS.some((c) => c.name === state.clubName);
+function ClubSection({ state, update, clubs }: SectionProps) {
+  const known = clubs.some((c) => c.name === state.clubName);
   const [manual, setManual] = useState(!known && state.clubName !== "");
 
   return (
@@ -116,7 +116,7 @@ function ClubSection({ state, update }: { state: GraphicState; update: Update })
             onChange={(e) => update({ clubName: e.target.value })}
           >
             <option value="">— Choose your club —</option>
-            {CLUBS.map((c) => (
+            {clubs.map((c) => (
               <option key={c.id} value={c.name}>
                 {c.name}
               </option>
@@ -137,7 +137,7 @@ function ClubSection({ state, update }: { state: GraphicState; update: Update })
 
 /* ------------------------------ background ------------------------------- */
 
-function BackgroundSection({ state, update }: { state: GraphicState; update: Update }) {
+function BackgroundSection({ state, update, backgrounds }: SectionProps) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const onFile = (file: File | undefined) => {
@@ -151,7 +151,7 @@ function BackgroundSection({ state, update }: { state: GraphicState; update: Upd
   return (
     <Section title="Background">
       <div className="grid grid-cols-5 gap-2">
-        {BACKGROUNDS.map((b) => {
+        {backgrounds.map((b) => {
           const active = state.backgroundId === b.id;
           return (
             <button
@@ -162,7 +162,15 @@ function BackgroundSection({ state, update }: { state: GraphicState; update: Upd
                 "group relative aspect-square overflow-hidden rounded-lg border-2 transition " +
                 (active ? "border-brand" : "border-line hover:border-line-strong")
               }
-              style={{ background: b.css }}
+              style={
+                b.kind === "gradient"
+                  ? { background: b.value }
+                  : {
+                      backgroundImage: `url(${b.value})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                    }
+              }
               title={b.label}
             >
               <span className="absolute inset-x-0 bottom-0 bg-black/45 py-0.5 text-center text-[9px] font-bold uppercase tracking-wider text-white">
@@ -191,7 +199,9 @@ function BackgroundSection({ state, update }: { state: GraphicState; update: Upd
               : "border-line text-ink-muted hover:border-line-strong hover:text-ink")
           }
         >
-          {state.backgroundId === "upload" ? "✓ Custom photo uploaded" : "⬆ Upload your own photo"}
+          {state.backgroundId === "upload"
+            ? "✓ Custom photo uploaded"
+            : "⬆ Upload your own photo"}
         </button>
       </div>
     </Section>
@@ -200,11 +210,11 @@ function BackgroundSection({ state, update }: { state: GraphicState; update: Upd
 
 /* -------------------------------- details ------------------------------- */
 
-function DetailsSection({ state, update }: { state: GraphicState; update: Update }) {
+function DetailsSection({ state, update, clubs }: SectionProps) {
   const listId = useId();
   const clubDatalist = (
     <datalist id={listId}>
-      {CLUBS.map((c) => (
+      {clubs.map((c) => (
         <option key={c.id} value={c.name} />
       ))}
     </datalist>
@@ -370,7 +380,7 @@ function DetailsSection({ state, update }: { state: GraphicState; update: Update
 
 /* --------------------------------- format ------------------------------- */
 
-function FormatSection({ state, update }: { state: GraphicState; update: Update }) {
+function FormatSection({ state, update }: SectionProps) {
   return (
     <Section title="Format">
       <div className="grid grid-cols-3 gap-2.5">

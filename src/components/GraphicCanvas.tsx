@@ -1,11 +1,8 @@
 import type { CSSProperties } from "react";
-import type { GraphicState } from "@/lib/types";
+import type { GraphicState, EventBrand, BackgroundData } from "@/lib/types";
 import { FORMAT_MAP } from "@/lib/formats";
-import { BACKGROUND_MAP } from "@/lib/backgrounds";
 import { clubInitials } from "@/lib/clubs";
-import { EVENT } from "@/lib/event";
 
-const RED = "#e83a48";
 const INK = "#f3f5fb";
 const MUTED = "rgba(233,237,247,0.62)";
 
@@ -15,18 +12,30 @@ const SANS = "var(--font-sans)";
 
 /** Renders a single graphic at native pixel size (1080 × format height). */
 export function GraphicCanvas({
+  event,
+  backgrounds,
   state,
   today,
 }: {
+  event: EventBrand;
+  backgrounds: BackgroundData[];
   state: GraphicState;
   today: string | null;
 }) {
+  const RED = event.brandColor;
   const fmt = FORMAT_MAP[state.format];
-  const bg = BACKGROUND_MAP[state.backgroundId] ?? BACKGROUND_MAP.none;
-  const isUpload = state.backgroundId === "upload" && state.uploadedImage;
+
+  const bg = backgrounds.find((b) => b.id === state.backgroundId);
+  const imageUrl =
+    state.backgroundId === "upload" && state.uploadedImage
+      ? state.uploadedImage
+      : bg?.kind === "image"
+        ? bg.value
+        : null;
+  const gradient = bg?.kind === "gradient" ? bg.value : "linear-gradient(160deg, #16203c 0%, #0c1120 100%)";
+
   const initials = clubInitials(state.clubName || "FC");
   const club = state.clubName?.trim() || "Your Club";
-
   const pad = fmt.id === "square" ? 66 : 76;
 
   return (
@@ -36,17 +45,17 @@ export function GraphicCanvas({
         width: fmt.width,
         height: fmt.height,
         overflow: "hidden",
-        background: isUpload ? "#0b1020" : bg.css,
+        background: imageUrl ? "#0b1020" : gradient,
         color: INK,
         fontFamily: SANS,
       }}
     >
-      {/* Uploaded photo layer */}
-      {isUpload && (
+      {imageUrl && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={state.uploadedImage as string}
+          src={imageUrl}
           alt=""
+          crossOrigin="anonymous"
           style={{
             position: "absolute",
             inset: 0,
@@ -75,7 +84,7 @@ export function GraphicCanvas({
           width: 620,
           height: 620,
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(232,58,72,0.28) 0%, rgba(232,58,72,0) 68%)",
+          background: `radial-gradient(circle, ${hexToRgba(RED, 0.28)} 0%, ${hexToRgba(RED, 0)} 68%)`,
         }}
       />
 
@@ -103,7 +112,7 @@ export function GraphicCanvas({
                 textTransform: "uppercase",
               }}
             >
-              {EVENT.name}
+              {event.name}
             </span>
           </div>
           <span
@@ -115,14 +124,14 @@ export function GraphicCanvas({
               color: MUTED,
             }}
           >
-            {EVENT.season}
+            {event.season}
           </span>
         </div>
 
         {/* Hero */}
         <div style={{ display: "flex", flexDirection: "column", gap: 30 }}>
-          <ClubEyebrow initials={initials} club={club} />
-          <TemplateBody state={state} today={today} />
+          <ClubEyebrow initials={initials} club={club} red={RED} />
+          <TemplateBody state={state} today={today} event={event} red={RED} />
         </div>
 
         {/* Footer */}
@@ -144,7 +153,7 @@ export function GraphicCanvas({
               fontStyle: "italic",
             }}
           >
-            {EVENT.hashtag}
+            {event.hashtag}
           </span>
           <span
             style={{
@@ -156,7 +165,7 @@ export function GraphicCanvas({
               color: MUTED,
             }}
           >
-            Powered by {EVENT.organizer}
+            Powered by {event.organizer}
           </span>
         </div>
       </div>
@@ -166,7 +175,15 @@ export function GraphicCanvas({
 
 /* ------------------------------------------------------------------ */
 
-function ClubEyebrow({ initials, club }: { initials: string; club: string }) {
+function ClubEyebrow({
+  initials,
+  club,
+  red,
+}: {
+  initials: string;
+  club: string;
+  red: string;
+}) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
       <div
@@ -174,7 +191,7 @@ function ClubEyebrow({ initials, club }: { initials: string; club: string }) {
           width: 92,
           height: 92,
           borderRadius: "50%",
-          border: `3px solid ${RED}`,
+          border: `3px solid ${red}`,
           background: "rgba(9,13,24,0.55)",
           display: "flex",
           alignItems: "center",
@@ -220,7 +237,7 @@ const subline: CSSProperties = {
   color: MUTED,
 };
 
-function Chip({ children }: { children: React.ReactNode }) {
+function Chip({ children, red }: { children: React.ReactNode; red: string }) {
   return (
     <span
       style={{
@@ -231,8 +248,8 @@ function Chip({ children }: { children: React.ReactNode }) {
         letterSpacing: "0.12em",
         textTransform: "uppercase",
         color: INK,
-        background: "rgba(232,58,72,0.16)",
-        border: "1.5px solid rgba(232,58,72,0.55)",
+        background: hexToRgba(red, 0.16),
+        border: `1.5px solid ${hexToRgba(red, 0.55)}`,
         borderRadius: 999,
         padding: "10px 22px",
       }}
@@ -245,21 +262,23 @@ function Chip({ children }: { children: React.ReactNode }) {
 function TemplateBody({
   state,
   today,
+  event,
+  red,
 }: {
   state: GraphicState;
   today: string | null;
+  event: EventBrand;
+  red: string;
 }) {
   switch (state.template) {
     case "were-in":
       return (
         <div style={{ display: "flex", flexDirection: "column", gap: 26 }}>
-          <h1 style={{ ...headline, fontSize: 176, color: RED }}>
-            We&rsquo;re In
-          </h1>
-          <div style={subline}>Officially headed to the {EVENT.shortName}</div>
+          <h1 style={{ ...headline, fontSize: 176, color: red }}>We&rsquo;re In</h1>
+          <div style={subline}>Officially headed to the {event.shortName}</div>
           {state.ageGroup && (
             <div>
-              <Chip>{state.ageGroup}</Chip>
+              <Chip red={red}>{state.ageGroup}</Chip>
             </div>
           )}
         </div>
@@ -268,7 +287,7 @@ function TemplateBody({
     case "champions":
       return (
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          <div style={{ ...subline, color: RED, fontWeight: 700 }}>🏆 Champions</div>
+          <div style={{ ...subline, color: red, fontWeight: 700 }}>🏆 Champions</div>
           <h1 style={{ ...headline, fontSize: 150 }}>
             {state.championTitle || "Division Champions"}
           </h1>
@@ -292,9 +311,9 @@ function TemplateBody({
             {state.opponent || "Opponent"}
           </div>
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-            {state.kickoff && <Chip>{state.kickoff}</Chip>}
-            {state.field && <Chip>{state.field}</Chip>}
-            {state.ageGroup && <Chip>{state.ageGroup}</Chip>}
+            {state.kickoff && <Chip red={red}>{state.kickoff}</Chip>}
+            {state.field && <Chip red={red}>{state.field}</Chip>}
+            {state.ageGroup && <Chip red={red}>{state.ageGroup}</Chip>}
           </div>
         </div>
       );
@@ -310,6 +329,7 @@ function TemplateBody({
                 index={i + 1}
                 opponent={g.opponent}
                 detail={g.detail}
+                red={red}
               />
             ))}
           </div>
@@ -322,7 +342,7 @@ function TemplateBody({
       const outcome = resultOutcome(our, their);
       return (
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <div style={{ ...subline, color: RED, fontWeight: 700 }}>Full Time</div>
+          <div style={{ ...subline, color: red, fontWeight: 700 }}>Full Time</div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 30 }}>
             <span style={{ fontFamily: DISPLAY, fontSize: 170, lineHeight: 0.85 }}>
               {our || "0"}
@@ -369,14 +389,7 @@ function TemplateBody({
       return (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div style={{ display: "flex", alignItems: "flex-end", gap: 42 }}>
-            <span
-              style={{
-                fontFamily: DISPLAY,
-                fontSize: 244,
-                lineHeight: 0.78,
-                color: RED,
-              }}
-            >
+            <span style={{ fontFamily: DISPLAY, fontSize: 244, lineHeight: 0.78, color: red }}>
               {days ?? "—"}
             </span>
             <span style={{ ...headline, fontSize: 88, marginBottom: 16 }}>
@@ -401,10 +414,12 @@ function ScheduleRow({
   index,
   opponent,
   detail,
+  red,
 }: {
   index: number;
   opponent: string;
   detail: string;
+  red: string;
 }) {
   return (
     <div
@@ -413,12 +428,12 @@ function ScheduleRow({
         alignItems: "center",
         gap: 22,
         background: "rgba(12,17,30,0.55)",
-        borderLeft: `5px solid ${RED}`,
+        borderLeft: `5px solid ${red}`,
         borderRadius: 10,
         padding: "18px 24px",
       }}
     >
-      <span style={{ fontFamily: DISPLAY, fontSize: 40, color: RED, minWidth: 34 }}>
+      <span style={{ fontFamily: DISPLAY, fontSize: 40, color: red, minWidth: 34 }}>
         {index}
       </span>
       <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
@@ -470,4 +485,15 @@ function formatDate(iso: string): string {
   return d
     .toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
     .toUpperCase();
+}
+
+/** Accepts #rgb / #rrggbb and returns an rgba() string. */
+function hexToRgba(hex: string, alpha: number): string {
+  let h = hex.replace("#", "").trim();
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  if (h.length !== 6) return `rgba(232,58,72,${alpha})`;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
