@@ -1,0 +1,473 @@
+import type { CSSProperties } from "react";
+import type { GraphicState } from "@/lib/types";
+import { FORMAT_MAP } from "@/lib/formats";
+import { BACKGROUND_MAP } from "@/lib/backgrounds";
+import { clubInitials } from "@/lib/clubs";
+import { EVENT } from "@/lib/event";
+
+const RED = "#e83a48";
+const INK = "#f3f5fb";
+const MUTED = "rgba(233,237,247,0.62)";
+
+const DISPLAY = "var(--font-display)";
+const COND = "var(--font-cond)";
+const SANS = "var(--font-sans)";
+
+/** Renders a single graphic at native pixel size (1080 × format height). */
+export function GraphicCanvas({
+  state,
+  today,
+}: {
+  state: GraphicState;
+  today: string | null;
+}) {
+  const fmt = FORMAT_MAP[state.format];
+  const bg = BACKGROUND_MAP[state.backgroundId] ?? BACKGROUND_MAP.none;
+  const isUpload = state.backgroundId === "upload" && state.uploadedImage;
+  const initials = clubInitials(state.clubName || "FC");
+  const club = state.clubName?.trim() || "Your Club";
+
+  const pad = fmt.id === "square" ? 66 : 76;
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: fmt.width,
+        height: fmt.height,
+        overflow: "hidden",
+        background: isUpload ? "#0b1020" : bg.css,
+        color: INK,
+        fontFamily: SANS,
+      }}
+    >
+      {/* Uploaded photo layer */}
+      {isUpload && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={state.uploadedImage as string}
+          alt=""
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+          }}
+        />
+      )}
+
+      {/* Legibility scrim */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background:
+            "linear-gradient(180deg, rgba(8,12,22,0.30) 0%, rgba(8,12,22,0.35) 38%, rgba(7,10,18,0.82) 82%, rgba(6,9,16,0.95) 100%)",
+        }}
+      />
+      {/* Soft brand glow */}
+      <div
+        style={{
+          position: "absolute",
+          left: -160,
+          bottom: -160,
+          width: 620,
+          height: 620,
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(232,58,72,0.28) 0%, rgba(232,58,72,0) 68%)",
+        }}
+      />
+
+      {/* Content */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          padding: pad,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+        }}
+      >
+        {/* Top kicker */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <span style={{ width: 30, height: 6, background: RED, borderRadius: 2 }} />
+            <span
+              style={{
+                fontFamily: COND,
+                fontWeight: 700,
+                fontSize: 25,
+                letterSpacing: "0.16em",
+                textTransform: "uppercase",
+              }}
+            >
+              {EVENT.name}
+            </span>
+          </div>
+          <span
+            style={{
+              fontFamily: COND,
+              fontWeight: 600,
+              fontSize: 23,
+              letterSpacing: "0.22em",
+              color: MUTED,
+            }}
+          >
+            {EVENT.season}
+          </span>
+        </div>
+
+        {/* Hero */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 30 }}>
+          <ClubEyebrow initials={initials} club={club} />
+          <TemplateBody state={state} today={today} />
+        </div>
+
+        {/* Footer */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderTop: "2px solid rgba(255,255,255,0.14)",
+            paddingTop: 22,
+          }}
+        >
+          <span
+            style={{
+              fontFamily: DISPLAY,
+              fontSize: 30,
+              letterSpacing: "0.02em",
+              color: RED,
+              fontStyle: "italic",
+            }}
+          >
+            {EVENT.hashtag}
+          </span>
+          <span
+            style={{
+              fontFamily: COND,
+              fontWeight: 600,
+              fontSize: 20,
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              color: MUTED,
+            }}
+          >
+            Powered by {EVENT.organizer}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+function ClubEyebrow({ initials, club }: { initials: string; club: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
+      <div
+        style={{
+          width: 92,
+          height: 92,
+          borderRadius: "50%",
+          border: `3px solid ${RED}`,
+          background: "rgba(9,13,24,0.55)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}
+      >
+        <span style={{ fontFamily: DISPLAY, fontSize: 38, letterSpacing: "0.02em" }}>
+          {initials}
+        </span>
+      </div>
+      <span
+        style={{
+          fontFamily: COND,
+          fontWeight: 700,
+          fontSize: 40,
+          lineHeight: 1.02,
+          letterSpacing: "0.04em",
+          textTransform: "uppercase",
+          maxWidth: 620,
+        }}
+      >
+        {club}
+      </span>
+    </div>
+  );
+}
+
+const headline: CSSProperties = {
+  fontFamily: DISPLAY,
+  lineHeight: 0.86,
+  letterSpacing: "0.005em",
+  textTransform: "uppercase",
+  margin: 0,
+};
+
+const subline: CSSProperties = {
+  fontFamily: COND,
+  fontWeight: 600,
+  fontSize: 30,
+  letterSpacing: "0.06em",
+  textTransform: "uppercase",
+  color: MUTED,
+};
+
+function Chip({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        fontFamily: COND,
+        fontWeight: 700,
+        fontSize: 26,
+        letterSpacing: "0.12em",
+        textTransform: "uppercase",
+        color: INK,
+        background: "rgba(232,58,72,0.16)",
+        border: "1.5px solid rgba(232,58,72,0.55)",
+        borderRadius: 999,
+        padding: "10px 22px",
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+function TemplateBody({
+  state,
+  today,
+}: {
+  state: GraphicState;
+  today: string | null;
+}) {
+  switch (state.template) {
+    case "were-in":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 26 }}>
+          <h1 style={{ ...headline, fontSize: 176, color: RED }}>
+            We&rsquo;re In
+          </h1>
+          <div style={subline}>Officially headed to the {EVENT.shortName}</div>
+          {state.ageGroup && (
+            <div>
+              <Chip>{state.ageGroup}</Chip>
+            </div>
+          )}
+        </div>
+      );
+
+    case "champions":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          <div style={{ ...subline, color: RED, fontWeight: 700 }}>🏆 Champions</div>
+          <h1 style={{ ...headline, fontSize: 150 }}>
+            {state.championTitle || "Division Champions"}
+          </h1>
+          {state.ageGroup && <div style={subline}>{state.ageGroup}</div>}
+        </div>
+      );
+
+    case "matchday":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+          <h1 style={{ ...headline, fontSize: 128 }}>Matchday</h1>
+          <div
+            style={{
+              fontFamily: DISPLAY,
+              fontSize: 60,
+              lineHeight: 1,
+              textTransform: "uppercase",
+            }}
+          >
+            <span style={{ color: MUTED, fontSize: 34, marginRight: 16 }}>VS</span>
+            {state.opponent || "Opponent"}
+          </div>
+          <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+            {state.kickoff && <Chip>{state.kickoff}</Chip>}
+            {state.field && <Chip>{state.field}</Chip>}
+            {state.ageGroup && <Chip>{state.ageGroup}</Chip>}
+          </div>
+        </div>
+      );
+
+    case "schedule":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+          <h1 style={{ ...headline, fontSize: 104 }}>Group Stage</h1>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {state.games.map((g, i) => (
+              <ScheduleRow
+                key={i}
+                index={i + 1}
+                opponent={g.opponent}
+                detail={g.detail}
+              />
+            ))}
+          </div>
+        </div>
+      );
+
+    case "result": {
+      const our = state.ourScore.trim();
+      const their = state.theirScore.trim();
+      const outcome = resultOutcome(our, their);
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div style={{ ...subline, color: RED, fontWeight: 700 }}>Full Time</div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 30 }}>
+            <span style={{ fontFamily: DISPLAY, fontSize: 170, lineHeight: 0.85 }}>
+              {our || "0"}
+            </span>
+            <span style={{ fontFamily: DISPLAY, fontSize: 96, color: MUTED }}>–</span>
+            <span style={{ fontFamily: DISPLAY, fontSize: 170, lineHeight: 0.85 }}>
+              {their || "0"}
+            </span>
+          </div>
+          <div
+            style={{
+              fontFamily: DISPLAY,
+              fontSize: 52,
+              textTransform: "uppercase",
+              lineHeight: 1,
+            }}
+          >
+            <span style={{ color: MUTED, fontSize: 30, marginRight: 14 }}>VS</span>
+            {state.opponent || "Opponent"}
+          </div>
+          {outcome && (
+            <div>
+              <span
+                style={{
+                  fontFamily: DISPLAY,
+                  fontSize: 30,
+                  letterSpacing: "0.08em",
+                  color: "#0b1020",
+                  background: outcome.color,
+                  borderRadius: 8,
+                  padding: "8px 20px",
+                }}
+              >
+                {outcome.label}
+              </span>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    case "countdown": {
+      const days = daysUntil(state.targetDate, today);
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 42 }}>
+            <span
+              style={{
+                fontFamily: DISPLAY,
+                fontSize: 244,
+                lineHeight: 0.78,
+                color: RED,
+              }}
+            >
+              {days ?? "—"}
+            </span>
+            <span style={{ ...headline, fontSize: 88, marginBottom: 16 }}>
+              {days === 1 ? "Day" : "Days"}
+              <br />
+              To Go
+            </span>
+          </div>
+          <div style={subline}>
+            {state.countdownLabel || "Kickoff"} · {formatDate(state.targetDate)}
+          </div>
+        </div>
+      );
+    }
+
+    default:
+      return null;
+  }
+}
+
+function ScheduleRow({
+  index,
+  opponent,
+  detail,
+}: {
+  index: number;
+  opponent: string;
+  detail: string;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 22,
+        background: "rgba(12,17,30,0.55)",
+        borderLeft: `5px solid ${RED}`,
+        borderRadius: 10,
+        padding: "18px 24px",
+      }}
+    >
+      <span style={{ fontFamily: DISPLAY, fontSize: 40, color: RED, minWidth: 34 }}>
+        {index}
+      </span>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
+        <span
+          style={{
+            fontFamily: COND,
+            fontWeight: 700,
+            fontSize: 38,
+            textTransform: "uppercase",
+            letterSpacing: "0.02em",
+            lineHeight: 1,
+          }}
+        >
+          {opponent || "TBD"}
+        </span>
+        {detail && (
+          <span style={{ fontFamily: SANS, fontWeight: 500, fontSize: 24, color: MUTED }}>
+            {detail}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+function resultOutcome(our: string, their: string) {
+  const a = Number(our);
+  const b = Number(their);
+  if (our === "" || their === "" || Number.isNaN(a) || Number.isNaN(b)) return null;
+  if (a > b) return { label: "Win", color: "#37d67a" };
+  if (a < b) return { label: "Loss", color: "#e83a48" };
+  return { label: "Draw", color: "#e9c23a" };
+}
+
+function daysUntil(target: string, today: string | null): number | null {
+  if (!target || !today) return null;
+  const t = Date.parse(target + "T00:00:00");
+  const n = Date.parse(today + "T00:00:00");
+  if (Number.isNaN(t) || Number.isNaN(n)) return null;
+  return Math.max(0, Math.round((t - n) / 86_400_000));
+}
+
+function formatDate(iso: string): string {
+  if (!iso) return "";
+  const d = new Date(iso + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return "";
+  return d
+    .toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    .toUpperCase();
+}

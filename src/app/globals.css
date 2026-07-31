@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ *
+ * Sideline Social Studio — design tokens
+ * ------------------------------------------------------------------ */
+@theme {
+  /* Surfaces (dark navy, Chicago-flag red accent) */
+  --color-navy: #0e1424;        /* page background            */
+  --color-navy-deep: #0a0f1c;   /* header / deepest           */
+  --color-panel: #171e36;       /* cards / control sections   */
+  --color-panel-2: #1e2745;     /* hover / raised             */
+  --color-input: #0f1830;       /* form fields                */
+  --color-line: rgba(255, 255, 255, 0.08);
+  --color-line-strong: rgba(255, 255, 255, 0.16);
+
+  /* Brand */
+  --color-brand: #e83a48;       /* red                         */
+  --color-brand-dark: #c31f2c;
+  --color-brand-soft: rgba(232, 58, 72, 0.14);
+
+  /* Ink */
+  --color-ink: #eef1f8;
+  --color-ink-muted: #8b94ac;
+  --color-ink-faint: #586079;
+
+  /* Type */
+  --font-display: "Anton", "Arial Narrow", sans-serif;
+  --font-cond: "Saira Condensed", "Arial Narrow", sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-navy);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Small helper: uppercase label styling used across the control panel */
+.label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+/* Custom scrollbar for the controls column */
+.thin-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+}
+.thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Native select arrow tidy-up */
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b94ac' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 34px;
+}
