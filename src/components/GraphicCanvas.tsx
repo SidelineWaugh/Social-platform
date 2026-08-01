@@ -1,7 +1,31 @@
 import type { CSSProperties } from "react";
-import type { GraphicState, EventBrand, BackgroundData } from "@/lib/types";
+import type {
+  GraphicState,
+  EventBrand,
+  BackgroundData,
+  ClubData,
+} from "@/lib/types";
 import { FORMAT_MAP } from "@/lib/formats";
 import { clubInitials } from "@/lib/clubs";
+
+/** Look up a team's logo by name (case-insensitive) among the event's clubs. */
+function findLogo(clubs: ClubData[], name: string): string | null {
+  const n = name.trim().toLowerCase();
+  if (!n) return null;
+  return clubs.find((c) => c.name.trim().toLowerCase() === n)?.logoUrl ?? null;
+}
+
+function InlineLogo({ src, size }: { src: string | null; size: number }) {
+  if (!src) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt=""
+      style={{ width: size, height: size, objectFit: "contain", flexShrink: 0 }}
+    />
+  );
+}
 
 const INK = "#f3f5fb";
 const MUTED = "rgba(233,237,247,0.62)";
@@ -14,12 +38,14 @@ const SANS = "var(--font-sans)";
 export function GraphicCanvas({
   event,
   backgrounds,
+  clubs,
   clubLogo,
   state,
   today,
 }: {
   event: EventBrand;
   backgrounds: BackgroundData[];
+  clubs: ClubData[];
   clubLogo: string | null;
   state: GraphicState;
   today: string | null;
@@ -143,6 +169,7 @@ export function GraphicCanvas({
             logo={clubLogo}
             club={club}
             initials={initials}
+            clubs={clubs}
           />
         </div>
 
@@ -296,6 +323,7 @@ function TemplateBody({
   logo,
   club,
   initials,
+  clubs,
 }: {
   state: GraphicState;
   today: string | null;
@@ -304,6 +332,7 @@ function TemplateBody({
   logo: string | null;
   club: string;
   initials: string;
+  clubs: ClubData[];
 }) {
   switch (state.template) {
     case "were-in":
@@ -323,11 +352,11 @@ function TemplateBody({
               src={logo}
               alt=""
               style={{
-                width: 320,
-                height: 320,
+                width: state.format === "square" ? 380 : 470,
+                height: state.format === "square" ? 380 : 470,
                 objectFit: "contain",
                 filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.6))",
-                marginBottom: 4,
+                marginBottom: 8,
               }}
             />
           ) : (
@@ -359,7 +388,7 @@ function TemplateBody({
           >
             {club}
           </div>
-          <h1 style={{ ...headline, fontSize: 176, color: red }}>We&rsquo;re In</h1>
+          <h1 style={{ ...headline, fontSize: 168, color: red }}>Confirmed</h1>
           <div style={subline}>Officially headed to the {event.shortName}</div>
           {state.ageGroup && (
             <div>
@@ -386,14 +415,18 @@ function TemplateBody({
           <h1 style={{ ...headline, fontSize: 128 }}>Matchday</h1>
           <div
             style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 18,
               fontFamily: DISPLAY,
               fontSize: 60,
               lineHeight: 1,
               textTransform: "uppercase",
             }}
           >
-            <span style={{ color: MUTED, fontSize: 34, marginRight: 16 }}>VS</span>
-            {state.opponent || "Opponent"}
+            <span style={{ color: MUTED, fontSize: 34 }}>VS</span>
+            <InlineLogo src={findLogo(clubs, state.opponent)} size={76} />
+            <span>{state.opponent || "Opponent"}</span>
           </div>
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
             {state.kickoff && <Chip red={red}>{state.kickoff}</Chip>}
@@ -444,6 +477,7 @@ function TemplateBody({
                 >
                   {i + 1}
                 </span>
+                <InlineLogo src={findLogo(clubs, t)} size={twoCol ? 44 : 56} />
                 <span
                   style={{
                     fontFamily: COND,
@@ -476,6 +510,7 @@ function TemplateBody({
                 opponent={g.opponent}
                 detail={g.detail}
                 red={red}
+                logo={findLogo(clubs, g.opponent)}
               />
             ))}
           </div>
@@ -500,14 +535,18 @@ function TemplateBody({
           </div>
           <div
             style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
               fontFamily: DISPLAY,
               fontSize: 52,
               textTransform: "uppercase",
               lineHeight: 1,
             }}
           >
-            <span style={{ color: MUTED, fontSize: 30, marginRight: 14 }}>VS</span>
-            {state.opponent || "Opponent"}
+            <span style={{ color: MUTED, fontSize: 30 }}>VS</span>
+            <InlineLogo src={findLogo(clubs, state.opponent)} size={64} />
+            <span>{state.opponent || "Opponent"}</span>
           </div>
           {outcome && (
             <div>
@@ -561,11 +600,13 @@ function ScheduleRow({
   opponent,
   detail,
   red,
+  logo,
 }: {
   index: number;
   opponent: string;
   detail: string;
   red: string;
+  logo: string | null;
 }) {
   return (
     <div
@@ -582,6 +623,7 @@ function ScheduleRow({
       <span style={{ fontFamily: DISPLAY, fontSize: 40, color: red, minWidth: 34 }}>
         {index}
       </span>
+      <InlineLogo src={logo} size={56} />
       <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
         <span
           style={{

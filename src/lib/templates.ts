@@ -8,7 +8,7 @@ export interface TemplateMeta {
 }
 
 export const TEMPLATES: TemplateMeta[] = [
-  { id: "were-in", label: "We're In", emoji: "✈️", blurb: "Announce your spot" },
+  { id: "were-in", label: "Confirmed", emoji: "✅", blurb: "Announce your spot" },
   { id: "champions", label: "Champions", emoji: "🏆", blurb: "Celebrate the win" },
   { id: "matchday", label: "Matchday", emoji: "⚽", blurb: "Hype the next game" },
   { id: "bracket", label: "Bracket", emoji: "🗂️", blurb: "Announce the field" },

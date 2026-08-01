@@ -111,6 +111,7 @@ export function Studio({
           <GraphicCanvas
             event={event}
             backgrounds={backgrounds}
+            clubs={clubs}
             clubLogo={clubLogo}
             state={state}
             today={today}
