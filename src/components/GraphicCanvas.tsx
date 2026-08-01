@@ -6,14 +6,7 @@ import type {
   ClubData,
 } from "@/lib/types";
 import { FORMAT_MAP } from "@/lib/formats";
-import { clubInitials } from "@/lib/clubs";
-
-/** Look up a team's logo by name (case-insensitive) among the event's clubs. */
-function findLogo(clubs: ClubData[], name: string): string | null {
-  const n = name.trim().toLowerCase();
-  if (!n) return null;
-  return clubs.find((c) => c.name.trim().toLowerCase() === n)?.logoUrl ?? null;
-}
+import { clubInitials, findClubLogo } from "@/lib/clubs";
 
 function InlineLogo({ src, size }: { src: string | null; size: number }) {
   if (!src) return null;
@@ -425,7 +418,7 @@ function TemplateBody({
             }}
           >
             <span style={{ color: MUTED, fontSize: 34 }}>VS</span>
-            <InlineLogo src={findLogo(clubs, state.opponent)} size={76} />
+            <InlineLogo src={findClubLogo(clubs, state.opponent)} size={76} />
             <span>{state.opponent || "Opponent"}</span>
           </div>
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
@@ -477,7 +470,7 @@ function TemplateBody({
                 >
                   {i + 1}
                 </span>
-                <InlineLogo src={findLogo(clubs, t)} size={twoCol ? 44 : 56} />
+                <InlineLogo src={findClubLogo(clubs, t)} size={twoCol ? 44 : 56} />
                 <span
                   style={{
                     fontFamily: COND,
@@ -510,7 +503,7 @@ function TemplateBody({
                 opponent={g.opponent}
                 detail={g.detail}
                 red={red}
-                logo={findLogo(clubs, g.opponent)}
+                logo={findClubLogo(clubs, g.opponent)}
               />
             ))}
           </div>
@@ -545,7 +538,7 @@ function TemplateBody({
             }}
           >
             <span style={{ color: MUTED, fontSize: 30 }}>VS</span>
-            <InlineLogo src={findLogo(clubs, state.opponent)} size={64} />
+            <InlineLogo src={findClubLogo(clubs, state.opponent)} size={64} />
             <span>{state.opponent || "Opponent"}</span>
           </div>
           {outcome && (

@@ -1,3 +1,43 @@
+import type { ClubData } from "./types";
+
+/**
+ * Resolve a team name to its club's logo. Handles "Club Name + suffix" (e.g.
+ * "South Orlando United ECRL" → the "South Orlando United" club) by matching
+ * the longest club name that the team name starts with, then falling back to a
+ * contained-substring match.
+ */
+export function findClubLogo(clubs: ClubData[], name: string): string | null {
+  const n = name.trim().toLowerCase();
+  if (!n) return null;
+
+  // Exact club match is authoritative (even if that club has no logo).
+  const exact = clubs.find((c) => c.name.trim().toLowerCase() === n);
+  if (exact) return exact.logoUrl;
+
+  let best: ClubData | null = null;
+  let bestLen = 0;
+
+  // "Club Name " is a prefix of the team name.
+  for (const c of clubs) {
+    const cn = c.name.trim().toLowerCase();
+    if (cn && n.startsWith(cn + " ") && cn.length > bestLen) {
+      best = c;
+      bestLen = cn.length;
+    }
+  }
+  if (best) return best.logoUrl;
+
+  // Club name appears anywhere in the team name.
+  for (const c of clubs) {
+    const cn = c.name.trim().toLowerCase();
+    if (cn && n.includes(cn) && cn.length > bestLen) {
+      best = c;
+      bestLen = cn.length;
+    }
+  }
+  return best ? best.logoUrl : null;
+}
+
 const STOP_WORDS = new Set([
   "fc",
   "sc",

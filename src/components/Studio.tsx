@@ -14,6 +14,7 @@ import { toPng } from "html-to-image";
 import { GraphicCanvas } from "./GraphicCanvas";
 import { Controls } from "./Controls";
 import { FORMAT_MAP } from "@/lib/formats";
+import { findClubLogo } from "@/lib/clubs";
 import type {
   GraphicState,
   EventBrand,
@@ -67,7 +68,7 @@ export function Studio({
   );
 
   const fmt = FORMAT_MAP[state.format];
-  const clubLogo = clubs.find((c) => c.name === state.clubName)?.logoUrl ?? null;
+  const clubLogo = findClubLogo(clubs, state.clubName);
 
   const download = async () => {
     const node = captureRef.current;
