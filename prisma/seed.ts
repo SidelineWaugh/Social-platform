@@ -53,6 +53,15 @@ async function main() {
       organizer: "Sideline",
       brandColor: "#e83a48",
       published: true,
+      enabledTemplates: [
+        "were-in",
+        "champions",
+        "matchday",
+        "bracket",
+        "schedule",
+        "result",
+        "countdown",
+      ],
       clubs: { create: CLUBS.map((name, i) => ({ name, sortOrder: i })) },
       backgrounds: {
         create: BACKGROUNDS.map((b, i) => ({

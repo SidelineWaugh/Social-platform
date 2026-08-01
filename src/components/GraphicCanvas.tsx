@@ -132,7 +132,7 @@ export function GraphicCanvas({
 
         {/* Hero */}
         <div style={{ display: "flex", flexDirection: "column", gap: 30 }}>
-          {state.template !== "were-in" && (
+          {state.template !== "were-in" && state.template !== "bracket" && (
             <ClubEyebrow initials={initials} club={club} red={RED} logo={clubLogo} />
           )}
           <TemplateBody
@@ -308,15 +308,23 @@ function TemplateBody({
   switch (state.template) {
     case "were-in":
       return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
+            gap: 22,
+          }}
+        >
           {logo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={logo}
               alt=""
               style={{
-                width: 300,
-                height: 300,
+                width: 320,
+                height: 320,
                 objectFit: "contain",
                 filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.6))",
                 marginBottom: 4,
@@ -394,6 +402,67 @@ function TemplateBody({
           </div>
         </div>
       );
+
+    case "bracket": {
+      const teams = state.bracketTeams.map((t) => t.trim()).filter(Boolean);
+      const twoCol = teams.length > 5;
+      const shown = teams.slice(0, 12);
+      const overflow = teams.length - shown.length;
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div style={{ ...subline, color: red, fontWeight: 700 }}>Bracket</div>
+          <h1 style={{ ...headline, fontSize: 96 }}>
+            {state.bracketName || "The Field"}
+          </h1>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: twoCol ? "1fr 1fr" : "1fr",
+              gap: 12,
+            }}
+          >
+            {shown.map((t, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 16,
+                  background: "rgba(12,17,30,0.55)",
+                  borderLeft: `5px solid ${red}`,
+                  borderRadius: 10,
+                  padding: twoCol ? "12px 18px" : "16px 22px",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: DISPLAY,
+                    fontSize: twoCol ? 30 : 38,
+                    color: red,
+                    minWidth: 30,
+                  }}
+                >
+                  {i + 1}
+                </span>
+                <span
+                  style={{
+                    fontFamily: COND,
+                    fontWeight: 700,
+                    fontSize: twoCol ? 28 : 36,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.02em",
+                    lineHeight: 1.02,
+                  }}
+                >
+                  {t}
+                </span>
+              </div>
+            ))}
+          </div>
+          {overflow > 0 && <div style={{ ...subline, fontSize: 26 }}>+{overflow} more</div>}
+        </div>
+      );
+    }
 
     case "schedule":
       return (

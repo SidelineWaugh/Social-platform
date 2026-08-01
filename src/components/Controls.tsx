@@ -348,6 +348,32 @@ function DetailsSection({ state, update, clubs }: SectionProps) {
             </div>
           ))}
 
+        {state.template === "bracket" && (
+          <>
+            <Field label="Bracket / division title">
+              <input
+                className={inputClass}
+                placeholder="U14 Boys Elite"
+                value={state.bracketName}
+                onChange={(e) => update({ bracketName: e.target.value })}
+              />
+            </Field>
+            <Field label="Teams (one per line)">
+              <textarea
+                rows={8}
+                className={inputClass + " resize-y"}
+                placeholder={"Bolingbrook SC\nChicago City Soccer Club\n…"}
+                value={state.bracketTeams.join("\n")}
+                onChange={(e) => update({ bracketTeams: e.target.value.split("\n") })}
+              />
+            </Field>
+            <p className="-mt-1 text-xs text-ink-faint">
+              Pre-filled with this event&rsquo;s teams — edit or paste your own.
+              Up to 12 show on the graphic.
+            </p>
+          </>
+        )}
+
         {state.template === "result" && (
           <>
             <Field label="Opponent">

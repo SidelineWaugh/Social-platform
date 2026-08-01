@@ -51,6 +51,8 @@ export function Studio({
     ],
     targetDate: event.startDateIso ?? "",
     countdownLabel: "Kickoff",
+    bracketName: "U14 Boys Elite",
+    bracketTeams: clubs.slice(0, 8).map((c) => c.name),
   }));
 
   const [today, setToday] = useState<string | null>(null);

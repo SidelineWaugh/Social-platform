@@ -2,6 +2,7 @@ export type TemplateId =
   | "were-in"
   | "champions"
   | "matchday"
+  | "bracket"
   | "schedule"
   | "result"
   | "countdown";
@@ -78,4 +79,8 @@ export interface GraphicState {
   // countdown
   targetDate: string; // yyyy-mm-dd
   countdownLabel: string; // "Days to kickoff"
+
+  // bracket
+  bracketName: string; // "U14 Boys Elite" / "Group A"
+  bracketTeams: string[]; // one team per line
 }
