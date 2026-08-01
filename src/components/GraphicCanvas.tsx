@@ -47,12 +47,17 @@ export function GraphicCanvas({
   const fmt = FORMAT_MAP[state.format];
 
   const bg = backgrounds.find((b) => b.id === state.backgroundId);
-  const imageUrl =
+  const rawImage =
     state.backgroundId === "upload" && state.uploadedImage
       ? state.uploadedImage
       : bg?.kind === "image"
         ? bg.value
         : null;
+  // External http(s) images are proxied same-origin so they display AND export.
+  const imageUrl =
+    rawImage && /^https?:\/\//i.test(rawImage)
+      ? `/api/bg?u=${encodeURIComponent(rawImage)}`
+      : rawImage;
   const gradient = bg?.kind === "gradient" ? bg.value : "linear-gradient(160deg, #16203c 0%, #0c1120 100%)";
 
   const initials = clubInitials(state.clubName || "FC");
