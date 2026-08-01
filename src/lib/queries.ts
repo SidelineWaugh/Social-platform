@@ -2,9 +2,11 @@ import { prisma } from "./db";
 import type {
   EventBrand,
   ClubData,
+  TeamData,
   BackgroundData,
   TemplateId,
 } from "./types";
+import { findClubLogo } from "./clubs";
 import type { Event as PrismaEvent } from "@prisma/client";
 
 export function toBrand(e: PrismaEvent): EventBrand {
@@ -33,6 +35,7 @@ export async function getPublishedEvents() {
 export interface StudioData {
   event: EventBrand;
   clubs: ClubData[];
+  teams: TeamData[];
   backgrounds: BackgroundData[];
 }
 
@@ -41,14 +44,34 @@ export async function getStudioData(slug: string): Promise<StudioData | null> {
     where: { slug },
     include: {
       clubs: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
+      teams: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
       backgrounds: { orderBy: { sortOrder: "asc" } },
     },
   });
   if (!e) return null;
 
+  const clubs: ClubData[] = e.clubs.map((c) => ({
+    id: c.id,
+    name: c.name,
+    logoUrl: c.logoUrl,
+  }));
+
+  const teams: TeamData[] = e.teams.map((t) => {
+    // Explicit club association wins; otherwise resolve by name.
+    const explicit = t.clubName
+      ? clubs.find((c) => c.name.trim().toLowerCase() === t.clubName!.trim().toLowerCase())?.logoUrl
+      : null;
+    return {
+      id: t.id,
+      name: t.name,
+      logoUrl: explicit ?? findClubLogo(clubs, t.name),
+    };
+  });
+
   return {
     event: toBrand(e),
-    clubs: e.clubs.map((c) => ({ id: c.id, name: c.name, logoUrl: c.logoUrl })),
+    clubs,
+    teams,
     backgrounds: e.backgrounds.map((b) => ({
       id: b.id,
       label: b.label,

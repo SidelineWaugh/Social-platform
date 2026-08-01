@@ -19,6 +19,7 @@ import type {
   GraphicState,
   EventBrand,
   ClubData,
+  TeamData,
   BackgroundData,
   TemplateId,
 } from "@/lib/types";
@@ -26,12 +27,19 @@ import type {
 export function Studio({
   event,
   clubs,
+  teams,
   backgrounds,
 }: {
   event: EventBrand;
   clubs: ClubData[];
+  teams: TeamData[];
   backgrounds: BackgroundData[];
 }) {
+  // When an event defines teams (club + age/level), they are the selectable
+  // options; otherwise fall back to the club list. Logos resolve against both.
+  const options: ClubData[] = teams.length ? teams : clubs;
+  const logoIndex: ClubData[] = teams.length ? [...clubs, ...teams] : clubs;
+
   const [state, setState] = useState<GraphicState>(() => ({
     template: (event.enabledTemplates[0] ?? "were-in") as TemplateId,
     format: "portrait",
@@ -53,7 +61,7 @@ export function Studio({
     targetDate: event.startDateIso ?? "",
     countdownLabel: "Kickoff",
     bracketName: "U14 Boys Elite",
-    bracketTeams: clubs.slice(0, 8).map((c) => c.name),
+    bracketTeams: options.slice(0, 8).map((o) => o.name),
   }));
 
   const [today, setToday] = useState<string | null>(null);
@@ -68,7 +76,7 @@ export function Studio({
   );
 
   const fmt = FORMAT_MAP[state.format];
-  const clubLogo = findClubLogo(clubs, state.clubName);
+  const clubLogo = findClubLogo(logoIndex, state.clubName);
 
   const download = async () => {
     const node = captureRef.current;
@@ -112,7 +120,7 @@ export function Studio({
           <GraphicCanvas
             event={event}
             backgrounds={backgrounds}
-            clubs={clubs}
+            clubs={logoIndex}
             clubLogo={clubLogo}
             state={state}
             today={today}
@@ -140,7 +148,7 @@ export function Studio({
           state={state}
           update={update}
           event={event}
-          clubs={clubs}
+          clubs={options}
           backgrounds={backgrounds}
         />
       </div>

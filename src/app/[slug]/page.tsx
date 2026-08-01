@@ -30,7 +30,7 @@ export default async function EventStudioPage({
   const data = await getStudioData(slug);
   if (!data) notFound();
 
-  const { event, clubs, backgrounds } = data;
+  const { event, clubs, teams, backgrounds } = data;
 
   return (
     <div
@@ -67,7 +67,7 @@ export default async function EventStudioPage({
             Tag {event.hashtag} when you share.
           </p>
         </div>
-        <Studio event={event} clubs={clubs} backgrounds={backgrounds} />
+        <Studio event={event} clubs={clubs} teams={teams} backgrounds={backgrounds} />
       </main>
 
       <footer className="border-t border-line py-6 text-center text-xs text-ink-faint">

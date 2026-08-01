@@ -43,6 +43,75 @@ function slugify(s: string): string {
 
 const MAX_LOGO_BYTES = 5 * 1024 * 1024;
 
+/* --------------------------------- csv ---------------------------------- */
+
+/** Minimal CSV parser (handles quoted fields and commas/newlines within). */
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else inQuotes = false;
+      } else field += ch;
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ",") {
+      row.push(field);
+      field = "";
+    } else if (ch === "\n") {
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = "";
+    } else if (ch !== "\r") {
+      field += ch;
+    }
+  }
+  if (field.length || row.length) {
+    row.push(field);
+    rows.push(row);
+  }
+  return rows.filter((r) => r.some((c) => c.trim() !== ""));
+}
+
+/**
+ * Turn CSV text into teams. Detects a header row and columns named
+ * team/name, club, age/division/level. Falls back to: build "Club Age",
+ * or use the first column as the team name.
+ */
+function teamsFromCsv(text: string): { name: string; clubName: string | null }[] {
+  const rows = parseCsv(text);
+  if (!rows.length) return [];
+  const header = rows[0].map((h) => h.trim().toLowerCase());
+  const known = ["team", "team name", "name", "club", "club name", "age", "age group", "division", "level"];
+  const hasHeader = header.some((h) => known.includes(h));
+  const idx = (names: string[]) => header.findIndex((h) => names.includes(h));
+  const teamCol = hasHeader ? idx(["team", "team name", "name"]) : -1;
+  const clubCol = hasHeader ? idx(["club", "club name"]) : -1;
+  const ageCol = hasHeader ? idx(["age", "age group", "division", "level"]) : -1;
+
+  const dataRows = hasHeader ? rows.slice(1) : rows;
+  const out: { name: string; clubName: string | null }[] = [];
+  for (const r of dataRows) {
+    const cell = (i: number) => (i >= 0 && i < r.length ? r[i].trim() : "");
+    const club = cell(clubCol);
+    const age = cell(ageCol);
+    let name = teamCol >= 0 ? cell(teamCol) : "";
+    if (!name) name = [club, age].filter(Boolean).join(" ");
+    if (!name) name = (r[0] ?? "").trim();
+    if (!name) continue;
+    out.push({ name, clubName: club || null });
+  }
+  return out;
+}
+
 /**
  * Resolve a club logo from a form: an uploaded file becomes a data URL (stored
  * in Postgres so it always renders in the exported PNG), or a pasted URL is
@@ -205,6 +274,74 @@ export async function deleteClubAction(formData: FormData) {
   const eventId = str(formData, "eventId");
   if (id) await prisma.club.delete({ where: { id } });
   if (eventId) revalidatePath(`/admin/events/${eventId}`);
+}
+
+/* --------------------------------- teams -------------------------------- */
+
+export async function addTeamAction(formData: FormData) {
+  await requireAdmin();
+  const eventId = str(formData, "eventId");
+  const name = str(formData, "name");
+  const clubName = str(formData, "clubName") || null;
+  if (eventId && name) {
+    const count = await prisma.team.count({ where: { eventId } });
+    await prisma.team.create({ data: { eventId, name, clubName, sortOrder: count } });
+    revalidatePath(`/admin/events/${eventId}`);
+  }
+}
+
+export async function bulkAddTeamsAction(formData: FormData) {
+  await requireAdmin();
+  const eventId = str(formData, "eventId");
+  const names = str(formData, "names")
+    .split("\n")
+    .map((n) => n.trim())
+    .filter(Boolean);
+  if (eventId && names.length) {
+    const count = await prisma.team.count({ where: { eventId } });
+    await prisma.team.createMany({
+      data: names.map((name, i) => ({ eventId, name, sortOrder: count + i })),
+    });
+    revalidatePath(`/admin/events/${eventId}`);
+  }
+}
+
+export async function importTeamsCsvAction(formData: FormData) {
+  await requireAdmin();
+  const eventId = str(formData, "eventId");
+  const file = formData.get("csv");
+  if (!eventId || !file || typeof file !== "object" || !("text" in file)) return;
+  const text = await (file as File).text();
+  const parsed = teamsFromCsv(text);
+  if (parsed.length) {
+    const count = await prisma.team.count({ where: { eventId } });
+    await prisma.team.createMany({
+      data: parsed.map((t, i) => ({
+        eventId,
+        name: t.name,
+        clubName: t.clubName,
+        sortOrder: count + i,
+      })),
+    });
+    revalidatePath(`/admin/events/${eventId}`);
+  }
+}
+
+export async function deleteTeamAction(formData: FormData) {
+  await requireAdmin();
+  const id = str(formData, "id");
+  const eventId = str(formData, "eventId");
+  if (id) await prisma.team.delete({ where: { id } });
+  if (eventId) revalidatePath(`/admin/events/${eventId}`);
+}
+
+export async function clearTeamsAction(formData: FormData) {
+  await requireAdmin();
+  const eventId = str(formData, "eventId");
+  if (eventId) {
+    await prisma.team.deleteMany({ where: { eventId } });
+    revalidatePath(`/admin/events/${eventId}`);
+  }
 }
 
 /* ------------------------------ backgrounds ----------------------------- */

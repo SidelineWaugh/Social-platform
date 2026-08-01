@@ -11,6 +11,10 @@ import {
   bulkAddClubsAction,
   deleteClubAction,
   setClubLogoAction,
+  bulkAddTeamsAction,
+  importTeamsCsvAction,
+  deleteTeamAction,
+  clearTeamsAction,
   addBackgroundAction,
   deleteBackgroundAction,
 } from "../../../actions";
@@ -34,6 +38,7 @@ export default async function EventEditor({
     where: { id },
     include: {
       clubs: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
+      teams: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
       backgrounds: { orderBy: { sortOrder: "asc" } },
     },
   });
@@ -258,6 +263,97 @@ export default async function EventEditor({
             </button>
           </form>
         </div>
+      </section>
+
+      {/* ----------------------------- teams ----------------------------- */}
+      <section className="rounded-xl border border-line bg-panel p-6">
+        <h2 className="mb-1 font-display text-xl uppercase tracking-wide text-ink">
+          Teams <span className="text-ink-faint">({event.teams.length})</span>
+        </h2>
+        <p className="mb-4 text-xs text-ink-muted">
+          Age/level teams (e.g. &ldquo;South Orlando United ECRL&rdquo;). When set,
+          these become the dropdown for Your Club, Opponent, and Bracket — logos are
+          matched to the Clubs above automatically.
+        </p>
+
+        {event.teams.length > 0 && (
+          <div className="mb-5 flex flex-wrap gap-2">
+            {event.teams.map((t) => (
+              <span
+                key={t.id}
+                className="inline-flex items-center gap-2 rounded-full border border-line bg-input py-1 pl-3 pr-1.5 text-sm text-ink"
+              >
+                {t.name}
+                <form action={deleteTeamAction}>
+                  <input type="hidden" name="id" value={t.id} />
+                  <input type="hidden" name="eventId" value={event.id} />
+                  <button
+                    type="submit"
+                    aria-label={`Remove ${t.name}`}
+                    className="grid h-5 w-5 place-items-center rounded-full bg-white/5 text-ink-muted transition hover:bg-brand hover:text-white"
+                  >
+                    ×
+                  </button>
+                </form>
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <form
+            action={importTeamsCsvAction}
+            className="flex flex-col gap-2 rounded-lg border border-line bg-input/40 p-3"
+          >
+            <span className={label}>Import CSV</span>
+            <input type="hidden" name="eventId" value={event.id} />
+            <input
+              type="file"
+              name="csv"
+              accept=".csv,text/csv"
+              className="text-xs text-ink-muted file:mr-2 file:rounded file:border-0 file:bg-panel-2 file:px-3 file:py-1.5 file:text-ink"
+            />
+            <button
+              type="submit"
+              className="self-start rounded-lg bg-brand px-4 py-2 font-cond text-sm font-bold uppercase tracking-wide text-white transition hover:brightness-110"
+            >
+              Import CSV
+            </button>
+            <span className="text-xs text-ink-faint">
+              Columns like Team, Club, Age are auto-detected; a single column of team
+              names also works.
+            </span>
+          </form>
+
+          <form action={bulkAddTeamsAction} className="flex flex-col gap-2">
+            <span className={label}>Or paste teams (one per line)</span>
+            <input type="hidden" name="eventId" value={event.id} />
+            <textarea
+              name="names"
+              rows={3}
+              placeholder={"South Orlando United ECRL\nSporting Jax U14\n…"}
+              className={input + " resize-y"}
+            />
+            <button
+              type="submit"
+              className="self-start rounded-lg border border-line px-4 py-2 font-cond text-sm font-bold uppercase tracking-wide text-ink-muted transition hover:text-ink"
+            >
+              Bulk add
+            </button>
+          </form>
+        </div>
+
+        {event.teams.length > 0 && (
+          <form action={clearTeamsAction} className="mt-4">
+            <input type="hidden" name="eventId" value={event.id} />
+            <button
+              type="submit"
+              className="text-xs text-ink-muted transition hover:text-brand"
+            >
+              Clear all teams
+            </button>
+          </form>
+        )}
       </section>
 
       {/* -------------------------- backgrounds -------------------------- */}

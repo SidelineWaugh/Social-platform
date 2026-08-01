@@ -34,9 +34,22 @@ model Event {
   updatedAt DateTime @updatedAt
 
   clubs       Club[]
+  teams       Team[]
   backgrounds Background[]
 
   @@index([published])
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name      String // full team name, e.g. "South Orlando United ECRL"
+  clubName  String? // optional explicit club association for the logo
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
 }
 
 model Club {

@@ -34,6 +34,13 @@ export interface ClubData {
   logoUrl: string | null;
 }
 
+/** A selectable team (club + age/level). Logo resolved from the club. */
+export interface TeamData {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+}
+
 export interface BackgroundData {
   id: string;
   label: string;
