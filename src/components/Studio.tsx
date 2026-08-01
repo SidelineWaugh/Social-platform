@@ -35,10 +35,19 @@ export function Studio({
   teams: TeamData[];
   backgrounds: BackgroundData[];
 }) {
-  // When an event defines teams (club + age/level), they are the selectable
-  // options; otherwise fall back to the club list. Logos resolve against both.
-  const options: ClubData[] = teams.length ? teams : clubs;
-  const logoIndex: ClubData[] = teams.length ? [...clubs, ...teams] : clubs;
+  // Pickers list clubs AND teams (deduped by name); logos resolve against both.
+  const dedupe = (list: ClubData[]) => {
+    const seen = new Set<string>();
+    return list.filter((o) => {
+      const k = o.name.trim().toLowerCase();
+      if (!k || seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  };
+  const options: ClubData[] = dedupe([...clubs, ...teams]);
+  const logoIndex: ClubData[] = [...clubs, ...teams];
+  const bracketSource = teams.length ? teams : clubs;
 
   const [state, setState] = useState<GraphicState>(() => ({
     template: (event.enabledTemplates[0] ?? "were-in") as TemplateId,
@@ -61,7 +70,9 @@ export function Studio({
     targetDate: event.startDateIso ?? "",
     countdownLabel: "Kickoff",
     bracketName: "U14 Boys Elite",
-    bracketTeams: options.slice(0, 8).map((o) => o.name),
+    bracketTeams: bracketSource.slice(0, 8).map((o) => o.name),
+    announceHeadline: "Registration Open",
+    announceSubtext: "",
   }));
 
   const [today, setToday] = useState<string | null>(null);

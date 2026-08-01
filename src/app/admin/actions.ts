@@ -175,6 +175,7 @@ export async function createEventAction(formData: FormData) {
       season: str(formData, "season") || String(new Date().getFullYear()),
       organizer: str(formData, "organizer") || "Sideline",
       brandColor: str(formData, "brandColor") || "#e83a48",
+      enabledTemplates: TEMPLATES.map((t) => t.id),
       backgrounds: {
         create: DEFAULT_BACKGROUNDS.map((b, i) => ({ ...b, sortOrder: i })),
       },
@@ -204,7 +205,6 @@ export async function updateEventAction(formData: FormData) {
       venue: str(formData, "venue") || null,
       organizer: str(formData, "organizer") || "Sideline",
       brandColor: str(formData, "brandColor") || "#e83a48",
-      logoUrl: str(formData, "logoUrl") || null,
       startDate: startRaw ? new Date(startRaw + "T00:00:00Z") : null,
       enabledTemplates: templates.length ? templates : undefined,
       published: formData.get("published") === "on",
@@ -212,6 +212,19 @@ export async function updateEventAction(formData: FormData) {
   });
   revalidatePath("/");
   redirect(`/admin/events/${id}?saved=1`);
+}
+
+export async function setEventLogoAction(formData: FormData) {
+  await requireAdmin();
+  const id = str(formData, "id");
+  if (!id) return;
+  if (formData.get("clear") === "1") {
+    await prisma.event.update({ where: { id }, data: { logoUrl: null } });
+  } else {
+    const logoUrl = await logoFromForm(formData);
+    if (logoUrl) await prisma.event.update({ where: { id }, data: { logoUrl } });
+  }
+  revalidatePath(`/admin/events/${id}`);
 }
 
 export async function deleteEventAction(formData: FormData) {

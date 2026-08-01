@@ -5,7 +5,8 @@ export type TemplateId =
   | "bracket"
   | "schedule"
   | "result"
-  | "countdown";
+  | "countdown"
+  | "announcement";
 
 export type FormatId = "portrait" | "square" | "story";
 
@@ -24,6 +25,7 @@ export interface EventBrand {
   organizer: string;
   brandColor: string;
   logoUrl: string | null;
+  venue: string | null;
   startDateIso: string | null; // yyyy-mm-dd, for the countdown default
   enabledTemplates: TemplateId[];
 }
@@ -90,4 +92,8 @@ export interface GraphicState {
   // bracket
   bracketName: string; // "U14 Boys Elite" / "Group A"
   bracketTeams: string[]; // one team per line
+
+  // announcement (event-level)
+  announceHeadline: string; // "Registration Open"
+  announceSubtext: string; // optional tagline
 }

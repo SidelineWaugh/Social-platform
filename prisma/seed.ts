@@ -61,6 +61,7 @@ async function main() {
         "schedule",
         "result",
         "countdown",
+        "announcement",
       ],
       clubs: { create: CLUBS.map((name, i) => ({ name, sortOrder: i })) },
       backgrounds: {

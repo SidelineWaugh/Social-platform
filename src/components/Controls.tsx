@@ -422,6 +422,30 @@ function DetailsSection({ state, update, clubs }: SectionProps) {
             </Field>
           </>
         )}
+
+        {state.template === "announcement" && (
+          <>
+            <Field label="Headline">
+              <input
+                className={inputClass}
+                placeholder="Registration Open"
+                value={state.announceHeadline}
+                onChange={(e) => update({ announceHeadline: e.target.value })}
+              />
+            </Field>
+            <Field label="Tagline (optional)">
+              <input
+                className={inputClass}
+                placeholder="Secure your spot today"
+                value={state.announceSubtext}
+                onChange={(e) => update({ announceSubtext: e.target.value })}
+              />
+            </Field>
+            <p className="-mt-1 text-xs text-ink-faint">
+              Event name, date, venue, and logo come from the event settings in Admin.
+            </p>
+          </>
+        )}
       </div>
     </Section>
   );

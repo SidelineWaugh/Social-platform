@@ -58,6 +58,12 @@ export function GraphicCanvas({
     rawImage && /^https?:\/\//i.test(rawImage)
       ? `/api/bg?u=${encodeURIComponent(rawImage)}`
       : rawImage;
+
+  const eventLogoSrc = event.logoUrl
+    ? /^https?:\/\//i.test(event.logoUrl)
+      ? `/api/bg?u=${encodeURIComponent(event.logoUrl)}`
+      : event.logoUrl
+    : null;
   const gradient = bg?.kind === "gradient" ? bg.value : "linear-gradient(160deg, #16203c 0%, #0c1120 100%)";
 
   const initials = clubInitials(state.clubName || "FC");
@@ -81,7 +87,6 @@ export function GraphicCanvas({
         <img
           src={imageUrl}
           alt=""
-          crossOrigin="anonymous"
           style={{
             position: "absolute",
             inset: 0,
@@ -141,24 +146,36 @@ export function GraphicCanvas({
               {event.name}
             </span>
           </div>
-          <span
-            style={{
-              fontFamily: COND,
-              fontWeight: 600,
-              fontSize: 23,
-              letterSpacing: "0.22em",
-              color: MUTED,
-            }}
-          >
-            {event.season}
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+            <span
+              style={{
+                fontFamily: COND,
+                fontWeight: 600,
+                fontSize: 23,
+                letterSpacing: "0.22em",
+                color: MUTED,
+              }}
+            >
+              {event.season}
+            </span>
+            {eventLogoSrc && state.template !== "announcement" && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={eventLogoSrc}
+                alt=""
+                style={{ height: 74, width: "auto", maxWidth: 210, objectFit: "contain" }}
+              />
+            )}
+          </div>
         </div>
 
         {/* Hero */}
         <div style={{ display: "flex", flexDirection: "column", gap: 30 }}>
-          {state.template !== "were-in" && state.template !== "bracket" && (
-            <ClubEyebrow initials={initials} club={club} red={RED} logo={clubLogo} />
-          )}
+          {state.template !== "were-in" &&
+            state.template !== "bracket" &&
+            state.template !== "announcement" && (
+              <ClubEyebrow initials={initials} club={club} red={RED} logo={clubLogo} />
+            )}
           <TemplateBody
             state={state}
             today={today}
@@ -168,6 +185,7 @@ export function GraphicCanvas({
             club={club}
             initials={initials}
             clubs={clubs}
+            eventLogo={eventLogoSrc}
           />
         </div>
 
@@ -322,6 +340,7 @@ function TemplateBody({
   club,
   initials,
   clubs,
+  eventLogo,
 }: {
   state: GraphicState;
   today: string | null;
@@ -331,6 +350,7 @@ function TemplateBody({
   club: string;
   initials: string;
   clubs: ClubData[];
+  eventLogo: string | null;
 }) {
   switch (state.template) {
     case "were-in":
@@ -587,6 +607,52 @@ function TemplateBody({
         </div>
       );
     }
+
+    case "announcement":
+      return (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
+            gap: 22,
+          }}
+        >
+          {eventLogo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={eventLogo}
+              alt=""
+              style={{
+                maxWidth: 580,
+                maxHeight: state.format === "square" ? 250 : 330,
+                objectFit: "contain",
+                marginBottom: 6,
+                filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.55))",
+              }}
+            />
+          )}
+          <div style={{ ...subline, color: red, fontWeight: 700, fontSize: 34 }}>
+            {state.announceHeadline || "Save The Date"}
+          </div>
+          <h1 style={{ ...headline, fontSize: state.format === "square" ? 92 : 108 }}>
+            {event.name}
+          </h1>
+          {state.announceSubtext && <div style={subline}>{state.announceSubtext}</div>}
+          <div
+            style={{
+              display: "flex",
+              gap: 14,
+              flexWrap: "wrap",
+              justifyContent: "center",
+            }}
+          >
+            {event.startDateIso && <Chip red={red}>{formatDate(event.startDateIso)}</Chip>}
+            {event.venue && <Chip red={red}>{event.venue}</Chip>}
+          </div>
+        </div>
+      );
 
     default:
       return null;

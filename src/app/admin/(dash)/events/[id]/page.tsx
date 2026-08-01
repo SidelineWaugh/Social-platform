@@ -6,6 +6,7 @@ import { clubInitials } from "@/lib/clubs";
 import { ImageUploadForm } from "@/components/admin/ImageUploadForm";
 import {
   updateEventAction,
+  setEventLogoAction,
   deleteEventAction,
   addClubAction,
   bulkAddClubsAction,
@@ -118,11 +119,6 @@ export default async function EventEditor({
               className="h-11 w-full rounded-lg border border-line bg-input px-2"
             />
           </label>
-          <label className="block sm:col-span-2">
-            <span className={label}>Logo URL (optional)</span>
-            <input name="logoUrl" defaultValue={event.logoUrl ?? ""} placeholder="https://…" className={input} />
-          </label>
-
           <div className="sm:col-span-2">
             <span className={label}>Enabled templates</span>
             <div className="flex flex-wrap gap-2">
@@ -162,6 +158,55 @@ export default async function EventEditor({
               Save changes
             </button>
           </div>
+        </form>
+      </section>
+
+      {/* --------------------------- event logo -------------------------- */}
+      <section className="rounded-xl border border-line bg-panel p-6">
+        <h2 className="mb-1 font-display text-xl uppercase tracking-wide text-ink">
+          Event logo
+        </h2>
+        <p className="mb-4 text-xs text-ink-muted">
+          Shown in a corner of every post and featured on the Event Announcement.
+          A transparent PNG wordmark works best.
+        </p>
+        <div className="flex flex-wrap items-center gap-4">
+          {event.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={event.logoUrl} alt="" className="h-14 max-w-[220px] object-contain" />
+          ) : (
+            <span className="text-sm text-ink-faint">No logo set</span>
+          )}
+          <ImageUploadForm
+            action={setEventLogoAction}
+            fieldName="logoUrl"
+            hidden={{ id: event.id }}
+            maxDim={512}
+            mime="image/png"
+            buttonLabel={event.logoUrl ? "Replace" : "Upload"}
+          />
+          {event.logoUrl && (
+            <form action={setEventLogoAction}>
+              <input type="hidden" name="id" value={event.id} />
+              <input type="hidden" name="clear" value="1" />
+              <button
+                type="submit"
+                className="text-xs text-ink-muted transition hover:text-brand"
+              >
+                Remove
+              </button>
+            </form>
+          )}
+        </div>
+        <form action={setEventLogoAction} className="mt-3 flex max-w-md gap-2">
+          <input type="hidden" name="id" value={event.id} />
+          <input name="logoUrl" placeholder="…or paste an image URL" className={input} />
+          <button
+            type="submit"
+            className="shrink-0 rounded-lg border border-line px-4 font-cond text-sm font-bold uppercase tracking-wide text-ink-muted transition hover:text-ink"
+          >
+            Set URL
+          </button>
         </form>
       </section>
 

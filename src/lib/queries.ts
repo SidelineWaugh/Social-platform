@@ -19,6 +19,7 @@ export function toBrand(e: PrismaEvent): EventBrand {
     organizer: e.organizer,
     brandColor: e.brandColor,
     logoUrl: e.logoUrl,
+    venue: e.venue,
     startDateIso: e.startDate ? e.startDate.toISOString().slice(0, 10) : null,
     enabledTemplates: e.enabledTemplates as TemplateId[],
   };
