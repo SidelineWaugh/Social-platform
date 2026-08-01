@@ -48,7 +48,7 @@ export async function getStudioData(slug: string): Promise<StudioData | null> {
 
   return {
     event: toBrand(e),
-    clubs: e.clubs.map((c) => ({ id: c.id, name: c.name })),
+    clubs: e.clubs.map((c) => ({ id: c.id, name: c.name, logoUrl: c.logoUrl })),
     backgrounds: e.backgrounds.map((b) => ({
       id: b.id,
       label: b.label,

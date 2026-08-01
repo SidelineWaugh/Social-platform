@@ -44,6 +44,7 @@ model Club {
   eventId   String
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   name      String
+  logoUrl   String?  // data URL (uploaded) or external image URL
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
 

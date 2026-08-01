@@ -41,6 +41,27 @@ function slugify(s: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
+const MAX_LOGO_BYTES = 700 * 1024;
+
+/**
+ * Resolve a club logo from a form: an uploaded file becomes a data URL (stored
+ * in Postgres so it always renders in the exported PNG), or a pasted URL is
+ * used as-is. Returns undefined when neither was provided.
+ */
+async function logoFromForm(fd: FormData): Promise<string | null | undefined> {
+  const file = fd.get("logo");
+  if (file && typeof file === "object" && "arrayBuffer" in file) {
+    const f = file as File;
+    if (f.size > 0 && f.size <= MAX_LOGO_BYTES) {
+      const buf = Buffer.from(await f.arrayBuffer());
+      const type = f.type || "image/png";
+      return `data:${type};base64,${buf.toString("base64")}`;
+    }
+  }
+  const url = str(fd, "logoUrl");
+  return url ? url : undefined;
+}
+
 /* --------------------------------- auth --------------------------------- */
 
 export async function loginAction(formData: FormData) {
@@ -139,9 +160,27 @@ export async function addClubAction(formData: FormData) {
   const name = str(formData, "name");
   if (eventId && name) {
     const count = await prisma.club.count({ where: { eventId } });
-    await prisma.club.create({ data: { eventId, name, sortOrder: count } });
+    const logoUrl = await logoFromForm(formData);
+    await prisma.club.create({
+      data: { eventId, name, sortOrder: count, logoUrl: logoUrl ?? null },
+    });
     revalidatePath(`/admin/events/${eventId}`);
   }
+}
+
+export async function setClubLogoAction(formData: FormData) {
+  await requireAdmin();
+  const id = str(formData, "id");
+  const eventId = str(formData, "eventId");
+  if (!id) return;
+
+  if (formData.get("clear") === "1") {
+    await prisma.club.update({ where: { id }, data: { logoUrl: null } });
+  } else {
+    const logoUrl = await logoFromForm(formData);
+    if (logoUrl) await prisma.club.update({ where: { id }, data: { logoUrl } });
+  }
+  if (eventId) revalidatePath(`/admin/events/${eventId}`);
 }
 
 export async function bulkAddClubsAction(formData: FormData) {

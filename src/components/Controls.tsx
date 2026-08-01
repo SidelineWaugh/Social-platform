@@ -9,6 +9,7 @@ import type {
 } from "@/lib/types";
 import { TEMPLATES } from "@/lib/templates";
 import { FORMATS } from "@/lib/formats";
+import { clubInitials } from "@/lib/clubs";
 
 type Update = (patch: Partial<GraphicState>) => void;
 
@@ -95,6 +96,7 @@ function TemplateSection({ state, update, event }: SectionProps) {
 function ClubSection({ state, update, clubs }: SectionProps) {
   const known = clubs.some((c) => c.name === state.clubName);
   const [manual, setManual] = useState(!known && state.clubName !== "");
+  const selected = clubs.find((c) => c.name === state.clubName);
 
   return (
     <Section title="Your Club">
@@ -124,6 +126,27 @@ function ClubSection({ state, update, clubs }: SectionProps) {
           </select>
         </Field>
       )}
+
+      {!manual && selected && (
+        <div className="mt-3 flex items-center gap-3 rounded-lg border border-line bg-input/60 p-2.5">
+          {selected.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={selected.logoUrl}
+              alt=""
+              className="h-9 w-9 shrink-0 object-contain"
+            />
+          ) : (
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-brand/60 font-cond text-[12px] font-bold text-ink">
+              {clubInitials(selected.name)}
+            </span>
+          )}
+          <span className="font-cond text-sm font-bold uppercase tracking-wide text-ink">
+            {selected.name}
+          </span>
+        </div>
+      )}
+
       <button
         type="button"
         onClick={() => setManual((m) => !m)}

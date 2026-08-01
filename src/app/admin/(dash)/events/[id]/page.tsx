@@ -2,12 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { TEMPLATES } from "@/lib/templates";
+import { clubInitials } from "@/lib/clubs";
 import {
   updateEventAction,
   deleteEventAction,
   addClubAction,
   bulkAddClubsAction,
   deleteClubAction,
+  setClubLogoAction,
   addBackgroundAction,
   deleteBackgroundAction,
 } from "../../../actions";
@@ -155,39 +157,93 @@ export default async function EventEditor({
           Clubs <span className="text-ink-faint">({event.clubs.length})</span>
         </h2>
 
+        <p className="-mt-2 mb-4 text-xs text-ink-muted">
+          Upload a logo per club (PNG with transparency works best) — it shows in
+          the graphic badge and the club picker. Max 700&nbsp;KB.
+        </p>
+
         {event.clubs.length > 0 && (
-          <div className="mb-5 flex flex-wrap gap-2">
+          <div className="mb-5 flex flex-col gap-2">
             {event.clubs.map((c) => (
-              <span
+              <div
                 key={c.id}
-                className="inline-flex items-center gap-2 rounded-full border border-line bg-input py-1 pl-3 pr-1.5 text-sm text-ink"
+                className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-input/50 p-2.5"
               >
-                {c.name}
+                {c.logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={c.logoUrl} alt="" className="h-9 w-9 shrink-0 object-contain" />
+                ) : (
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-brand/50 font-cond text-[11px] font-bold text-ink">
+                    {clubInitials(c.name)}
+                  </span>
+                )}
+                <span className="min-w-[140px] flex-1 font-cond text-sm font-bold uppercase tracking-wide text-ink">
+                  {c.name}
+                </span>
+
+                <form action={setClubLogoAction} className="flex items-center gap-1.5">
+                  <input type="hidden" name="id" value={c.id} />
+                  <input type="hidden" name="eventId" value={event.id} />
+                  <input
+                    type="file"
+                    name="logo"
+                    accept="image/*"
+                    required
+                    className="w-44 text-xs text-ink-muted file:mr-2 file:rounded file:border-0 file:bg-panel-2 file:px-2 file:py-1 file:text-ink"
+                  />
+                  <button
+                    type="submit"
+                    className="rounded bg-brand px-2.5 py-1 font-cond text-xs font-bold uppercase text-white transition hover:brightness-110"
+                  >
+                    {c.logoUrl ? "Replace" : "Upload"}
+                  </button>
+                </form>
+
+                {c.logoUrl && (
+                  <form action={setClubLogoAction}>
+                    <input type="hidden" name="id" value={c.id} />
+                    <input type="hidden" name="eventId" value={event.id} />
+                    <input type="hidden" name="clear" value="1" />
+                    <button
+                      type="submit"
+                      className="text-xs text-ink-muted transition hover:text-brand"
+                    >
+                      Clear
+                    </button>
+                  </form>
+                )}
+
                 <form action={deleteClubAction}>
                   <input type="hidden" name="id" value={c.id} />
                   <input type="hidden" name="eventId" value={event.id} />
                   <button
                     type="submit"
                     aria-label={`Remove ${c.name}`}
-                    className="grid h-5 w-5 place-items-center rounded-full bg-white/5 text-ink-muted transition hover:bg-brand hover:text-white"
+                    className="grid h-6 w-6 place-items-center rounded-full bg-white/5 text-ink-muted transition hover:bg-brand hover:text-white"
                   >
                     ×
                   </button>
                 </form>
-              </span>
+              </div>
             ))}
           </div>
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <form action={addClubAction} className="flex gap-2">
+          <form action={addClubAction} className="flex flex-col gap-2">
             <input type="hidden" name="eventId" value={event.id} />
             <input name="name" placeholder="Add a club…" className={input} />
+            <input
+              type="file"
+              name="logo"
+              accept="image/*"
+              className="text-xs text-ink-muted file:mr-2 file:rounded file:border-0 file:bg-panel-2 file:px-3 file:py-1.5 file:text-ink"
+            />
             <button
               type="submit"
-              className="shrink-0 rounded-lg bg-brand px-4 font-cond text-sm font-bold uppercase tracking-wide text-white transition hover:brightness-110"
+              className="self-start rounded-lg bg-brand px-4 py-2 font-cond text-sm font-bold uppercase tracking-wide text-white transition hover:brightness-110"
             >
-              Add
+              Add club
             </button>
           </form>
           <form action={bulkAddClubsAction} className="flex flex-col gap-2">

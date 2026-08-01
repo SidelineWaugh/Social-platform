@@ -65,6 +65,7 @@ export function Studio({
   );
 
   const fmt = FORMAT_MAP[state.format];
+  const clubLogo = clubs.find((c) => c.name === state.clubName)?.logoUrl ?? null;
 
   const download = async () => {
     const node = captureRef.current;
@@ -108,6 +109,7 @@ export function Studio({
           <GraphicCanvas
             event={event}
             backgrounds={backgrounds}
+            clubLogo={clubLogo}
             state={state}
             today={today}
           />

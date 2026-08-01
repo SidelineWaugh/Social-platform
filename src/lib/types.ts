@@ -30,6 +30,7 @@ export interface EventBrand {
 export interface ClubData {
   id: string;
   name: string;
+  logoUrl: string | null;
 }
 
 export interface BackgroundData {

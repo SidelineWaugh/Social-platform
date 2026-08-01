@@ -14,11 +14,13 @@ const SANS = "var(--font-sans)";
 export function GraphicCanvas({
   event,
   backgrounds,
+  clubLogo,
   state,
   today,
 }: {
   event: EventBrand;
   backgrounds: BackgroundData[];
+  clubLogo: string | null;
   state: GraphicState;
   today: string | null;
 }) {
@@ -130,7 +132,7 @@ export function GraphicCanvas({
 
         {/* Hero */}
         <div style={{ display: "flex", flexDirection: "column", gap: 30 }}>
-          <ClubEyebrow initials={initials} club={club} red={RED} />
+          <ClubEyebrow initials={initials} club={club} red={RED} logo={clubLogo} />
           <TemplateBody state={state} today={today} event={event} red={RED} />
         </div>
 
@@ -179,30 +181,47 @@ function ClubEyebrow({
   initials,
   club,
   red,
+  logo,
 }: {
   initials: string;
   club: string;
   red: string;
+  logo: string | null;
 }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
-      <div
-        style={{
-          width: 92,
-          height: 92,
-          borderRadius: "50%",
-          border: `3px solid ${red}`,
-          background: "rgba(9,13,24,0.55)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-        }}
-      >
-        <span style={{ fontFamily: DISPLAY, fontSize: 38, letterSpacing: "0.02em" }}>
-          {initials}
-        </span>
-      </div>
+      {logo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={logo}
+          alt=""
+          style={{
+            width: 108,
+            height: 108,
+            objectFit: "contain",
+            flexShrink: 0,
+            filter: "drop-shadow(0 4px 10px rgba(0,0,0,0.55))",
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            width: 92,
+            height: 92,
+            borderRadius: "50%",
+            border: `3px solid ${red}`,
+            background: "rgba(9,13,24,0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <span style={{ fontFamily: DISPLAY, fontSize: 38, letterSpacing: "0.02em" }}>
+            {initials}
+          </span>
+        </div>
+      )}
       <span
         style={{
           fontFamily: COND,
