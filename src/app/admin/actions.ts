@@ -41,7 +41,7 @@ function slugify(s: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
-const MAX_LOGO_BYTES = 700 * 1024;
+const MAX_LOGO_BYTES = 5 * 1024 * 1024;
 
 /**
  * Resolve a club logo from a form: an uploaded file becomes a data URL (stored
@@ -141,8 +141,8 @@ export async function updateEventAction(formData: FormData) {
       published: formData.get("published") === "on",
     },
   });
-  revalidatePath(`/admin/events/${id}`);
   revalidatePath("/");
+  redirect(`/admin/events/${id}?saved=1`);
 }
 
 export async function deleteEventAction(formData: FormData) {

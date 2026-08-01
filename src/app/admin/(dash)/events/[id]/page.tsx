@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { TEMPLATES } from "@/lib/templates";
 import { clubInitials } from "@/lib/clubs";
+import { ImageUploadForm } from "@/components/admin/ImageUploadForm";
 import {
   updateEventAction,
   deleteEventAction,
@@ -22,10 +23,13 @@ const label = "label mb-1.5 block text-ink-faint!";
 
 export default async function EventEditor({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ saved?: string }>;
 }) {
   const { id } = await params;
+  const { saved } = await searchParams;
   const event = await prisma.event.findUnique({
     where: { id },
     include: {
@@ -65,6 +69,11 @@ export default async function EventEditor({
         <h2 className="mb-4 font-display text-xl uppercase tracking-wide text-ink">
           Details &amp; branding
         </h2>
+        {saved && (
+          <div className="mb-4 rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-2 text-sm text-green-400">
+            Saved ✓
+          </div>
+        )}
         <form action={updateEventAction} className="grid gap-4 sm:grid-cols-2">
           <input type="hidden" name="id" value={event.id} />
           <label className="block">
@@ -159,7 +168,8 @@ export default async function EventEditor({
 
         <p className="-mt-2 mb-4 text-xs text-ink-muted">
           Upload a logo per club (PNG with transparency works best) — it shows in
-          the graphic badge and the club picker. Max 700&nbsp;KB.
+          the graphic badge and the club picker. Images are resized automatically,
+          so any size is fine.
         </p>
 
         {event.clubs.length > 0 && (
@@ -181,23 +191,14 @@ export default async function EventEditor({
                   {c.name}
                 </span>
 
-                <form action={setClubLogoAction} className="flex items-center gap-1.5">
-                  <input type="hidden" name="id" value={c.id} />
-                  <input type="hidden" name="eventId" value={event.id} />
-                  <input
-                    type="file"
-                    name="logo"
-                    accept="image/*"
-                    required
-                    className="w-44 text-xs text-ink-muted file:mr-2 file:rounded file:border-0 file:bg-panel-2 file:px-2 file:py-1 file:text-ink"
-                  />
-                  <button
-                    type="submit"
-                    className="rounded bg-brand px-2.5 py-1 font-cond text-xs font-bold uppercase text-white transition hover:brightness-110"
-                  >
-                    {c.logoUrl ? "Replace" : "Upload"}
-                  </button>
-                </form>
+                <ImageUploadForm
+                  action={setClubLogoAction}
+                  fieldName="logoUrl"
+                  hidden={{ id: c.id, eventId: event.id }}
+                  maxDim={256}
+                  mime="image/png"
+                  buttonLabel={c.logoUrl ? "Replace" : "Upload"}
+                />
 
                 {c.logoUrl && (
                   <form action={setClubLogoAction}>
@@ -233,18 +234,13 @@ export default async function EventEditor({
           <form action={addClubAction} className="flex flex-col gap-2">
             <input type="hidden" name="eventId" value={event.id} />
             <input name="name" placeholder="Add a club…" className={input} />
-            <input
-              type="file"
-              name="logo"
-              accept="image/*"
-              className="text-xs text-ink-muted file:mr-2 file:rounded file:border-0 file:bg-panel-2 file:px-3 file:py-1.5 file:text-ink"
-            />
             <button
               type="submit"
               className="self-start rounded-lg bg-brand px-4 py-2 font-cond text-sm font-bold uppercase tracking-wide text-white transition hover:brightness-110"
             >
               Add club
             </button>
+            <span className="text-xs text-ink-faint">Add a logo from the list above.</span>
           </form>
           <form action={bulkAddClubsAction} className="flex flex-col gap-2">
             <input type="hidden" name="eventId" value={event.id} />
@@ -335,6 +331,24 @@ export default async function EventEditor({
             </button>
           </div>
         </form>
+
+        <div className="mt-5 border-t border-line pt-5">
+          <span className={label}>Or upload a background photo (recommended)</span>
+          <p className="mb-3 text-xs text-ink-muted">
+            Uploaded photos are resized and always show in the graphic and the
+            download. External image URLs can be blocked or fail to export.
+          </p>
+          <ImageUploadForm
+            action={addBackgroundAction}
+            fieldName="value"
+            hidden={{ eventId: event.id, kind: "image" }}
+            maxDim={1280}
+            mime="image/jpeg"
+            buttonLabel="Add photo"
+          >
+            <input name="label" placeholder="Label (e.g. Venue)" className={input + " w-44"} />
+          </ImageUploadForm>
+        </div>
       </section>
 
       {/* ---------------------------- danger ----------------------------- */}
