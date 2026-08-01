@@ -32,10 +32,17 @@ const BACKGROUNDS: { label: string; kind: string; value: string }[] = [
 ];
 
 async function main() {
-  const event = await prisma.event.upsert({
-    where: { slug: "chicago-cup" },
-    update: {},
-    create: {
+  // Idempotent + non-destructive: only seed a fresh database. If the event
+  // already exists we leave it (and any admin edits) untouched. Safe to run
+  // on every deploy.
+  const existing = await prisma.event.findUnique({ where: { slug: "chicago-cup" } });
+  if (existing) {
+    console.log(`Seed skipped — "${existing.name}" already exists.`);
+    return;
+  }
+
+  const event = await prisma.event.create({
+    data: {
       slug: "chicago-cup",
       name: "Chicago International Cup",
       shortName: "Chicago Cup",
@@ -46,24 +53,16 @@ async function main() {
       organizer: "Sideline",
       brandColor: "#e83a48",
       published: true,
+      clubs: { create: CLUBS.map((name, i) => ({ name, sortOrder: i })) },
+      backgrounds: {
+        create: BACKGROUNDS.map((b, i) => ({
+          label: b.label,
+          kind: b.kind,
+          value: b.value,
+          sortOrder: i,
+        })),
+      },
     },
-  });
-
-  // Reset child rows so the seed is idempotent.
-  await prisma.club.deleteMany({ where: { eventId: event.id } });
-  await prisma.background.deleteMany({ where: { eventId: event.id } });
-
-  await prisma.club.createMany({
-    data: CLUBS.map((name, i) => ({ eventId: event.id, name, sortOrder: i })),
-  });
-  await prisma.background.createMany({
-    data: BACKGROUNDS.map((b, i) => ({
-      eventId: event.id,
-      label: b.label,
-      kind: b.kind,
-      value: b.value,
-      sortOrder: i,
-    })),
   });
 
   console.log(

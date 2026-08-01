@@ -1,0 +1,34 @@
+# Render Blueprint — provisions the web app AND a Postgres database together,
+# and auto-injects DATABASE_URL. No manual variable wiring.
+#
+# Deploy: Render Dashboard -> New -> Blueprint -> pick this repo -> Apply.
+# You'll be asked for ADMIN_PASSWORD once; everything else is automatic.
+
+databases:
+  - name: sideline-db
+    databaseName: sideline
+    user: sideline
+    plan: free
+
+services:
+  - type: web
+    name: sideline-social
+    runtime: node
+    plan: free
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npx prisma migrate deploy && (npm run db:seed || true) && npx next start -p $PORT
+    healthCheckPath: /
+    envVars:
+      # Auto-wired from the database above — this is the whole point.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sideline-db
+          property: connectionString
+      # Render generates a strong random value for the session signature.
+      - key: SESSION_SECRET
+        generateValue: true
+      # You set this once in the dashboard when applying the blueprint.
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: NODE_VERSION
+        value: "22.11.0"

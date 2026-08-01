@@ -52,6 +52,22 @@ npm run dev                  # http://localhost:3000
 
 - `/` — event list · `/chicago-cup` — studio · `/admin` — dashboard.
 
+## Deploy to Render (easiest — one blueprint)
+
+`render.yaml` provisions the web app **and** a Postgres database together and
+wires `DATABASE_URL` automatically — no manual variable step.
+
+1. Push this repo to GitHub (done).
+2. Render Dashboard → **New → Blueprint** → pick this repo → **Apply**.
+3. When prompted, enter an **`ADMIN_PASSWORD`** (for `/admin`). `SESSION_SECRET`
+   is generated for you; `DATABASE_URL` is auto-wired from the database.
+4. First boot runs `prisma migrate deploy` and seeds the Chicago Cup event, then
+   starts the server. The seed is non-destructive (only seeds an empty DB).
+
+> Free tier note: Render's free web service sleeps after inactivity (cold start
+> on first hit) and the free Postgres expires ~30 days after creation. Bump both
+> to a paid instance for production.
+
 ## Deploy to Railway
 
 1. **New Project → Deploy from GitHub repo** (this repo).
