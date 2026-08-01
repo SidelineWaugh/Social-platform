@@ -132,8 +132,18 @@ export function GraphicCanvas({
 
         {/* Hero */}
         <div style={{ display: "flex", flexDirection: "column", gap: 30 }}>
-          <ClubEyebrow initials={initials} club={club} red={RED} logo={clubLogo} />
-          <TemplateBody state={state} today={today} event={event} red={RED} />
+          {state.template !== "were-in" && (
+            <ClubEyebrow initials={initials} club={club} red={RED} logo={clubLogo} />
+          )}
+          <TemplateBody
+            state={state}
+            today={today}
+            event={event}
+            red={RED}
+            logo={clubLogo}
+            club={club}
+            initials={initials}
+          />
         </div>
 
         {/* Footer */}
@@ -283,16 +293,64 @@ function TemplateBody({
   today,
   event,
   red,
+  logo,
+  club,
+  initials,
 }: {
   state: GraphicState;
   today: string | null;
   event: EventBrand;
   red: string;
+  logo: string | null;
+  club: string;
+  initials: string;
 }) {
   switch (state.template) {
     case "were-in":
       return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 26 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+          {logo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logo}
+              alt=""
+              style={{
+                width: 300,
+                height: 300,
+                objectFit: "contain",
+                filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.6))",
+                marginBottom: 4,
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 150,
+                height: 150,
+                borderRadius: "50%",
+                border: `4px solid ${red}`,
+                background: "rgba(9,13,24,0.55)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <span style={{ fontFamily: DISPLAY, fontSize: 60 }}>{initials}</span>
+            </div>
+          )}
+          <div
+            style={{
+              fontFamily: COND,
+              fontWeight: 700,
+              fontSize: 44,
+              lineHeight: 1.02,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              maxWidth: 780,
+            }}
+          >
+            {club}
+          </div>
           <h1 style={{ ...headline, fontSize: 176, color: red }}>We&rsquo;re In</h1>
           <div style={subline}>Officially headed to the {event.shortName}</div>
           {state.ageGroup && (
