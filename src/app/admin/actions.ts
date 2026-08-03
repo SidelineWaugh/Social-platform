@@ -13,6 +13,7 @@ import {
 } from "@/lib/auth";
 import { TEMPLATES } from "@/lib/templates";
 import { BRAND_STYLES } from "@/lib/brandBg";
+import { extractBrandColors, type BrandColors } from "@/lib/extractColors";
 
 const VALID_TEMPLATES = new Set(TEMPLATES.map((t) => t.id));
 
@@ -235,6 +236,40 @@ export async function setEventLogoAction(formData: FormData) {
     if (logoUrl) await prisma.event.update({ where: { id }, data: { logoUrl } });
   }
   revalidatePath(`/admin/events/${id}`);
+}
+
+/**
+ * Read the event logo with Claude vision and set the brand + accent colours
+ * from it. Redirects back with a status flag so the editor can show the result.
+ */
+export async function extractBrandColorsAction(formData: FormData) {
+  await requireAdmin();
+  const id = str(formData, "id");
+  if (!id) return;
+
+  const event = await prisma.event.findUnique({
+    where: { id },
+    select: { logoUrl: true },
+  });
+  const logo = event?.logoUrl;
+  if (!logo || !logo.startsWith("data:")) {
+    redirect(`/admin/events/${id}?colors=nologo`);
+  }
+
+  let colors: BrandColors;
+  try {
+    colors = await extractBrandColors(logo);
+  } catch (e) {
+    const reason = e instanceof Error && e.message === "no-key" ? "nokey" : "fail";
+    redirect(`/admin/events/${id}?colors=${reason}`);
+  }
+
+  await prisma.event.update({
+    where: { id },
+    data: { brandColor: colors.primary, brandColor2: colors.accent },
+  });
+  revalidatePath("/");
+  redirect(`/admin/events/${id}?colors=1`);
 }
 
 export async function deleteEventAction(formData: FormData) {

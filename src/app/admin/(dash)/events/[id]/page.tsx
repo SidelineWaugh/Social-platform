@@ -20,6 +20,7 @@ import {
   addBackgroundAction,
   addBrandStylesAction,
   deleteBackgroundAction,
+  extractBrandColorsAction,
 } from "../../../actions";
 
 export const dynamic = "force-dynamic";
@@ -33,10 +34,30 @@ export default async function EventEditor({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ saved?: string }>;
+  searchParams: Promise<{ saved?: string; colors?: string }>;
 }) {
   const { id } = await params;
-  const { saved } = await searchParams;
+  const { saved, colors } = await searchParams;
+
+  const colorBanner: Record<string, { tone: string; msg: string }> = {
+    "1": {
+      tone: "border-green-500/30 bg-green-500/10 text-green-400",
+      msg: "Brand colours read from the logo ✓ — check the swatches below and Save changes to keep them.",
+    },
+    nokey: {
+      tone: "border-amber-500/30 bg-amber-500/10 text-amber-400",
+      msg: "Colour extraction isn't configured — add an ANTHROPIC_API_KEY in Render to enable it.",
+    },
+    nologo: {
+      tone: "border-amber-500/30 bg-amber-500/10 text-amber-400",
+      msg: "Upload an event logo first, then pull colours from it.",
+    },
+    fail: {
+      tone: "border-brand/40 bg-brand/10 text-brand",
+      msg: "Couldn't read colours from that logo — set them manually below.",
+    },
+  };
+  const banner = colors ? colorBanner[colors] : undefined;
   const event = await prisma.event.findUnique({
     where: { id },
     include: {
@@ -80,6 +101,11 @@ export default async function EventEditor({
         {saved && (
           <div className="mb-4 rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-2 text-sm text-green-400">
             Saved ✓
+          </div>
+        )}
+        {banner && (
+          <div className={`mb-4 rounded-lg border px-4 py-2 text-sm ${banner.tone}`}>
+            {banner.msg}
           </div>
         )}
         <form action={updateEventAction} className="grid gap-4 sm:grid-cols-2">
@@ -212,6 +238,20 @@ export default async function EventEditor({
             </form>
           )}
         </div>
+        {event.logoUrl?.startsWith("data:") && (
+          <form action={extractBrandColorsAction} className="mt-4">
+            <input type="hidden" name="id" value={event.id} />
+            <button
+              type="submit"
+              className="rounded-lg border border-brand/50 px-4 py-2 font-cond text-sm font-bold uppercase tracking-wide text-brand transition hover:bg-brand hover:text-white"
+            >
+              🎨 Pull brand colours from this logo
+            </button>
+            <span className="ml-3 text-xs text-ink-faint">
+              Uses Claude to read the primary + accent colours and fill them in above.
+            </span>
+          </form>
+        )}
         <form action={setEventLogoAction} className="mt-3 flex max-w-md gap-2">
           <input type="hidden" name="id" value={event.id} />
           <input name="logoUrl" placeholder="…or paste an image URL" className={input} />

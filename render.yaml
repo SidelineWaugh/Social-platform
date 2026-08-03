@@ -30,5 +30,10 @@ services:
       # You set this once in the dashboard when applying the blueprint.
       - key: ADMIN_PASSWORD
         sync: false
+      # Optional — enables the "Pull brand colours from logo" button (Claude
+      # vision). Leave unset to keep colours manual; the button reports that
+      # it's not configured rather than failing.
+      - key: ANTHROPIC_API_KEY
+        sync: false
       - key: NODE_VERSION
         value: "22.11.0"
