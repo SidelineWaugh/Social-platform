@@ -22,8 +22,9 @@ model Event {
   organizer String   @default("Sideline")
 
   // Branding
-  brandColor String  @default("#e83a48")
-  logoUrl    String?
+  brandColor  String  @default("#e83a48")
+  brandColor2 String? // accent/secondary — used by the code-drawn Brand Kit backgrounds
+  logoUrl     String?
 
   // Which of the code-defined templates are enabled for this event.
   enabledTemplates String[] @default(["were-in", "champions", "matchday", "bracket", "schedule", "result", "countdown", "announcement"])

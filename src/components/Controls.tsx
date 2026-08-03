@@ -10,6 +10,7 @@ import type {
 import { TEMPLATES } from "@/lib/templates";
 import { FORMATS } from "@/lib/formats";
 import { clubInitials } from "@/lib/clubs";
+import { brandBackground } from "@/lib/brandBg";
 
 type Update = (patch: Partial<GraphicState>) => void;
 
@@ -160,7 +161,7 @@ function ClubSection({ state, update, clubs }: SectionProps) {
 
 /* ------------------------------ background ------------------------------- */
 
-function BackgroundSection({ state, update, backgrounds }: SectionProps) {
+function BackgroundSection({ state, update, event, backgrounds }: SectionProps) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const onFile = (file: File | undefined) => {
@@ -186,13 +187,15 @@ function BackgroundSection({ state, update, backgrounds }: SectionProps) {
                 (active ? "border-brand" : "border-line hover:border-line-strong")
               }
               style={
-                b.kind === "gradient"
-                  ? { background: b.value }
-                  : {
-                      backgroundImage: `url(${b.value})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                    }
+                b.kind === "brand"
+                  ? { background: brandBackground(b.value, event.brandColor, event.brandColor2) }
+                  : b.kind === "gradient"
+                    ? { background: b.value }
+                    : {
+                        backgroundImage: `url(${b.value})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                      }
               }
               title={b.label}
             >

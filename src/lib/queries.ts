@@ -18,6 +18,7 @@ export function toBrand(e: PrismaEvent): EventBrand {
     season: e.season,
     organizer: e.organizer,
     brandColor: e.brandColor,
+    brandColor2: e.brandColor2,
     logoUrl: e.logoUrl,
     venue: e.venue,
     startDateIso: e.startDate ? e.startDate.toISOString().slice(0, 10) : null,
@@ -76,7 +77,7 @@ export async function getStudioData(slug: string): Promise<StudioData | null> {
     backgrounds: e.backgrounds.map((b) => ({
       id: b.id,
       label: b.label,
-      kind: b.kind === "image" ? "image" : "gradient",
+      kind: b.kind === "image" ? "image" : b.kind === "brand" ? "brand" : "gradient",
       value: b.value,
     })),
   };

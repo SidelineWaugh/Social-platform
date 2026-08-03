@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { TEMPLATES } from "@/lib/templates";
 import { clubInitials } from "@/lib/clubs";
 import { ImageUploadForm } from "@/components/admin/ImageUploadForm";
+import { brandBackground } from "@/lib/brandBg";
 import {
   updateEventAction,
   setEventLogoAction,
@@ -17,6 +18,7 @@ import {
   deleteTeamAction,
   clearTeamsAction,
   addBackgroundAction,
+  addBrandStylesAction,
   deleteBackgroundAction,
 } from "../../../actions";
 
@@ -111,13 +113,25 @@ export default async function EventEditor({
             <input name="organizer" defaultValue={event.organizer} className={input} />
           </label>
           <label className="block">
-            <span className={label}>Brand color</span>
+            <span className={label}>Brand color (primary)</span>
             <input
               name="brandColor"
               type="color"
               defaultValue={event.brandColor}
               className="h-11 w-full rounded-lg border border-line bg-input px-2"
             />
+          </label>
+          <label className="block">
+            <span className={label}>Accent color (host brand)</span>
+            <input
+              name="brandColor2"
+              type="color"
+              defaultValue={event.brandColor2 ?? "#86e3b0"}
+              className="h-11 w-full rounded-lg border border-line bg-input px-2"
+            />
+            <span className="mt-1 block text-[11px] text-ink-faint">
+              Used by the Brand Kit backgrounds to match a host club&rsquo;s look.
+            </span>
           </label>
           <div className="sm:col-span-2">
             <span className={label}>Enabled templates</span>
@@ -403,9 +417,30 @@ export default async function EventEditor({
 
       {/* -------------------------- backgrounds -------------------------- */}
       <section className="rounded-xl border border-line bg-panel p-6">
-        <h2 className="mb-4 font-display text-xl uppercase tracking-wide text-ink">
+        <h2 className="mb-1 font-display text-xl uppercase tracking-wide text-ink">
           Backgrounds <span className="text-ink-faint">({event.backgrounds.length})</span>
         </h2>
+
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-brand/25 bg-brand/5 p-3">
+          <div className="flex-1 text-xs text-ink-muted">
+            <span className="font-cond font-bold uppercase tracking-wide text-ink">
+              Brand Kit
+            </span>{" "}
+            — code-drawn backgrounds in this event&rsquo;s{" "}
+            <span className="text-ink">primary + accent</span> colours, so every
+            post feels like the host club posted it. No image cost; always crisp.
+            Recolours automatically when you change the colours above.
+          </div>
+          <form action={addBrandStylesAction}>
+            <input type="hidden" name="eventId" value={event.id} />
+            <button
+              type="submit"
+              className="shrink-0 rounded-lg bg-brand px-4 py-2 font-cond text-sm font-bold uppercase tracking-wide text-white transition hover:brightness-110"
+            >
+              Add Brand Kit styles
+            </button>
+          </form>
+        </div>
 
         {event.backgrounds.length > 0 && (
           <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -414,13 +449,15 @@ export default async function EventEditor({
                 <div
                   className="aspect-video"
                   style={
-                    b.kind === "gradient"
-                      ? { background: b.value }
-                      : {
-                          backgroundImage: `url(${b.value})`,
-                          backgroundSize: "cover",
-                          backgroundPosition: "center",
-                        }
+                    b.kind === "brand"
+                      ? { background: brandBackground(b.value, event.brandColor, event.brandColor2) }
+                      : b.kind === "gradient"
+                        ? { background: b.value }
+                        : {
+                            backgroundImage: `url(${b.value})`,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                          }
                   }
                 />
                 <div className="flex items-center justify-between bg-input px-2.5 py-1.5">

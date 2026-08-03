@@ -18,9 +18,8 @@ function loadImage(file: File): Promise<HTMLImageElement> {
   });
 }
 
-/** Downscale an image file to a data URL no larger than `maxDim` on its long edge. */
-async function resizeToDataUrl(file: File, maxDim: number, mime: string): Promise<string> {
-  const img = await loadImage(file);
+/** Render an image onto a canvas at a given long-edge size and return a data URL. */
+function encodeAt(img: HTMLImageElement, maxDim: number, mime: string, quality: number): string {
   let w = img.naturalWidth || maxDim;
   let h = img.naturalHeight || maxDim;
   const scale = Math.min(1, maxDim / Math.max(w, h));
@@ -32,7 +31,37 @@ async function resizeToDataUrl(file: File, maxDim: number, mime: string): Promis
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("no canvas context");
   ctx.drawImage(img, 0, 0, w, h);
-  return canvas.toDataURL(mime, mime === "image/jpeg" ? 0.85 : undefined);
+  return canvas.toDataURL(mime, mime === "image/jpeg" ? quality : undefined);
+}
+
+// Keep every upload comfortably under the Server Action body limit (default 1MB
+// on some hosts). A logo that encodes larger than this was silently dropped
+// before — now we shrink it (quality first for JPEG, then dimensions) until it
+// fits, so uploads always persist.
+const MAX_DATAURL_CHARS = 900_000;
+
+/**
+ * Downscale an image file to a data URL that starts at `maxDim` on its long edge
+ * and is guaranteed to fit within MAX_DATAURL_CHARS. Detailed crests can encode
+ * larger than expected, so we back off dimensions/quality until it's safe.
+ */
+async function resizeToDataUrl(file: File, maxDim: number, mime: string): Promise<string> {
+  const img = await loadImage(file);
+  let dim = maxDim;
+  let quality = 0.85;
+  let out = encodeAt(img, dim, mime, quality);
+  let guard = 0;
+  while (out.length > MAX_DATAURL_CHARS && guard < 12) {
+    guard++;
+    if (mime === "image/jpeg" && quality > 0.5) {
+      quality -= 0.1;
+    } else {
+      dim = Math.max(96, Math.round(dim * 0.82));
+    }
+    out = encodeAt(img, dim, mime, quality);
+    if (dim <= 96 && quality <= 0.5) break;
+  }
+  return out;
 }
 
 /**

@@ -7,6 +7,7 @@ import type {
 } from "@/lib/types";
 import { FORMAT_MAP } from "@/lib/formats";
 import { clubInitials, findClubLogo } from "@/lib/clubs";
+import { brandBackground } from "@/lib/brandBg";
 
 function InlineLogo({ src, size }: { src: string | null; size: number }) {
   if (!src) return null;
@@ -43,7 +44,12 @@ export function GraphicCanvas({
   state: GraphicState;
   today: string | null;
 }) {
-  const RED = event.brandColor;
+  const PRIMARY = event.brandColor;
+  // Accent for headline highlights, chips, the kicker bar, and glows. Prefer the
+  // host's accent colour so these stay legible on a dark Brand Kit background
+  // (a dark primary used as text-on-dark would vanish). Falls back to the
+  // primary for events with no accent set, preserving the original look.
+  const RED = event.brandColor2 || event.brandColor;
   const fmt = FORMAT_MAP[state.format];
 
   const bg = backgrounds.find((b) => b.id === state.backgroundId);
@@ -64,7 +70,17 @@ export function GraphicCanvas({
       ? `/api/bg?u=${encodeURIComponent(event.logoUrl)}`
       : event.logoUrl
     : null;
-  const gradient = bg?.kind === "gradient" ? bg.value : "linear-gradient(160deg, #16203c 0%, #0c1120 100%)";
+  // A code-drawn Brand Kit background renders the event in the host club's
+  // colours; a gentler, hue-neutral scrim keeps those colours vivid.
+  const isBrand = bg?.kind === "brand";
+  const gradient = isBrand
+    ? brandBackground(bg!.value, PRIMARY, event.brandColor2)
+    : bg?.kind === "gradient"
+      ? bg.value
+      : "linear-gradient(160deg, #16203c 0%, #0c1120 100%)";
+  const scrim = isBrand
+    ? "linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.04) 42%, rgba(0,0,0,0.50) 82%, rgba(0,0,0,0.64) 100%)"
+    : "linear-gradient(180deg, rgba(8,12,22,0.30) 0%, rgba(8,12,22,0.35) 38%, rgba(7,10,18,0.82) 82%, rgba(6,9,16,0.95) 100%)";
 
   const initials = clubInitials(state.clubName || "FC");
   const club = state.clubName?.trim() || "Your Club";
@@ -98,14 +114,7 @@ export function GraphicCanvas({
       )}
 
       {/* Legibility scrim */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background:
-            "linear-gradient(180deg, rgba(8,12,22,0.30) 0%, rgba(8,12,22,0.35) 38%, rgba(7,10,18,0.82) 82%, rgba(6,9,16,0.95) 100%)",
-        }}
-      />
+      <div style={{ position: "absolute", inset: 0, background: scrim }} />
       {/* Soft brand glow */}
       <div
         style={{

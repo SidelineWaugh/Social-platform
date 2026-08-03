@@ -24,6 +24,7 @@ export interface EventBrand {
   season: string;
   organizer: string;
   brandColor: string;
+  brandColor2: string | null;
   logoUrl: string | null;
   venue: string | null;
   startDateIso: string | null; // yyyy-mm-dd, for the countdown default
@@ -46,8 +47,8 @@ export interface TeamData {
 export interface BackgroundData {
   id: string;
   label: string;
-  kind: "gradient" | "image";
-  value: string; // CSS gradient string OR image URL
+  kind: "gradient" | "image" | "brand";
+  value: string; // CSS gradient string, image URL, or a Brand Kit style key
 }
 
 /** One game row used by the schedule template. */

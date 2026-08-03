@@ -23,6 +23,13 @@ const CLUBS = [
   "Yuriria",
 ];
 
+const BRAND_STYLES = [
+  { key: "deep", label: "Deep" },
+  { key: "spotlight", label: "Spotlight" },
+  { key: "palm", label: "Palm" },
+  { key: "blades", label: "Blades" },
+];
+
 const BACKGROUNDS: { label: string; kind: string; value: string }[] = [
   { label: "None", kind: "gradient", value: "linear-gradient(160deg, #16203c 0%, #0c1120 100%)" },
   { label: "Venue", kind: "gradient", value: "radial-gradient(120% 80% at 50% 15%, #2f6b3a 0%, #1f4f2b 40%, #12331d 75%, #0c2216 100%)" },
@@ -65,12 +72,21 @@ async function main() {
       ],
       clubs: { create: CLUBS.map((name, i) => ({ name, sortOrder: i })) },
       backgrounds: {
-        create: BACKGROUNDS.map((b, i) => ({
-          label: b.label,
-          kind: b.kind,
-          value: b.value,
-          sortOrder: i,
-        })),
+        create: [
+          ...BACKGROUNDS.map((b, i) => ({
+            label: b.label,
+            kind: b.kind,
+            value: b.value,
+            sortOrder: i,
+          })),
+          // Code-drawn Brand Kit styles (recolour from the event's brand colours).
+          ...BRAND_STYLES.map((s, i) => ({
+            label: s.label,
+            kind: "brand",
+            value: s.key,
+            sortOrder: BACKGROUNDS.length + i,
+          })),
+        ],
       },
     },
   });

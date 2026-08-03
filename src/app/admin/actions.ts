@@ -12,6 +12,7 @@ import {
   verifySessionToken,
 } from "@/lib/auth";
 import { TEMPLATES } from "@/lib/templates";
+import { BRAND_STYLES } from "@/lib/brandBg";
 
 const VALID_TEMPLATES = new Set(TEMPLATES.map((t) => t.id));
 
@@ -177,7 +178,15 @@ export async function createEventAction(formData: FormData) {
       brandColor: str(formData, "brandColor") || "#e83a48",
       enabledTemplates: TEMPLATES.map((t) => t.id),
       backgrounds: {
-        create: DEFAULT_BACKGROUNDS.map((b, i) => ({ ...b, sortOrder: i })),
+        create: [
+          ...DEFAULT_BACKGROUNDS.map((b, i) => ({ ...b, sortOrder: i })),
+          ...BRAND_STYLES.map((s, i) => ({
+            label: s.label,
+            kind: "brand",
+            value: s.key,
+            sortOrder: DEFAULT_BACKGROUNDS.length + i,
+          })),
+        ],
       },
     },
   });
@@ -205,6 +214,7 @@ export async function updateEventAction(formData: FormData) {
       venue: str(formData, "venue") || null,
       organizer: str(formData, "organizer") || "Sideline",
       brandColor: str(formData, "brandColor") || "#e83a48",
+      brandColor2: str(formData, "brandColor2") || null,
       startDate: startRaw ? new Date(startRaw + "T00:00:00Z") : null,
       enabledTemplates: templates.length ? templates : undefined,
       published: formData.get("published") === "on",
@@ -372,6 +382,31 @@ export async function addBackgroundAction(formData: FormData) {
     });
     revalidatePath(`/admin/events/${eventId}`);
   }
+}
+
+export async function addBrandStylesAction(formData: FormData) {
+  await requireAdmin();
+  const eventId = str(formData, "eventId");
+  if (!eventId) return;
+  const existing = await prisma.background.findMany({
+    where: { eventId, kind: "brand" },
+    select: { value: true },
+  });
+  const have = new Set(existing.map((b) => b.value));
+  const missing = BRAND_STYLES.filter((s) => !have.has(s.key));
+  if (missing.length) {
+    const count = await prisma.background.count({ where: { eventId } });
+    await prisma.background.createMany({
+      data: missing.map((s, i) => ({
+        eventId,
+        label: s.label,
+        kind: "brand",
+        value: s.key,
+        sortOrder: count + i,
+      })),
+    });
+  }
+  revalidatePath(`/admin/events/${eventId}`);
 }
 
 export async function deleteBackgroundAction(formData: FormData) {
