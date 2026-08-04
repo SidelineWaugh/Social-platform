@@ -7,7 +7,12 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Pooled connection for the app (works well on serverless like Vercel).
+  url = env("DATABASE_URL")
+  // Direct (non-pooled) connection used only for migrations. On Neon this is
+  // the "unpooled" connection string; other hosts can point it at the same URL
+  // as DATABASE_URL.
+  directUrl = env("DIRECT_URL")
 }
 
 model Event {

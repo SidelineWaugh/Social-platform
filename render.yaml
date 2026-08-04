@@ -24,6 +24,11 @@ services:
         fromDatabase:
           name: sideline-db
           property: connectionString
+      # Prisma migrations use directUrl; on Render it's the same connection.
+      - key: DIRECT_URL
+        fromDatabase:
+          name: sideline-db
+          property: connectionString
       # Render generates a strong random value for the session signature.
       - key: SESSION_SECRET
         generateValue: true
