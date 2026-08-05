@@ -117,6 +117,24 @@ export function GraphicCanvas({
         />
       )}
 
+      {/* Event-logo watermark (Crest brand style): the exact logo, full-bleed,
+          in its real colours, behind the scrim so text stays legible. */}
+      {showWatermark && eventLogoSrc && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={eventLogoSrc}
+          alt=""
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            opacity: 0.25,
+          }}
+        />
+      )}
+
       {/* Legibility scrim */}
       <div style={{ position: "absolute", inset: 0, background: scrim }} />
       {/* Soft brand glow */}
@@ -131,26 +149,6 @@ export function GraphicCanvas({
           background: `radial-gradient(circle, ${hexToRgba(RED, 0.28)} 0%, ${hexToRgba(RED, 0)} 68%)`,
         }}
       />
-
-      {/* Event-logo watermark (Crest brand style) */}
-      {showWatermark && eventLogoSrc && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={eventLogoSrc}
-          alt=""
-          style={{
-            position: "absolute",
-            top: "50%",
-            right: "-10%",
-            transform: "translateY(-50%)",
-            width: "88%",
-            height: "auto",
-            objectFit: "contain",
-            opacity: 0.1,
-            filter: "brightness(0) invert(1)",
-          }}
-        />
-      )}
 
       {/* Content */}
       <div
@@ -196,7 +194,7 @@ export function GraphicCanvas({
               <img
                 src={eventLogoSrc}
                 alt=""
-                style={{ height: 104, width: "auto", maxWidth: 280, objectFit: "contain" }}
+                style={{ height: 220, width: "auto", maxWidth: 480, objectFit: "contain" }}
               />
             )}
           </div>
