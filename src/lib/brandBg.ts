@@ -82,7 +82,7 @@ export function deriveAccent(primary: string): string {
 
 /** A stylised palm silhouette, tinted with the accent colour, for the "palm" style. */
 function palmLayer(accent: string): string {
-  const fill = alpha(accent, 0.075);
+  const fill = alpha(accent, 0.12);
   const svg =
     `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'>` +
     `<g fill='${fill}'>` +
@@ -113,40 +113,51 @@ export function brandBackground(
   accent: string | null | undefined,
 ): string {
   const a = accent && accent.trim() ? accent : deriveAccent(primary);
+  // A tonal vignette (a near-black shade of the brand colour) darkens the edges
+  // for depth — the "designed" look real club graphics have, in-hue so it never
+  // muddies the colour.
+  const vignette = `radial-gradient(125% 108% at 50% 26%, transparent 40%, ${alpha(
+    shade(primary, 0.9),
+    0.6,
+  )} 100%)`;
 
   switch (style) {
     case "spotlight":
       return [
-        `radial-gradient(70% 55% at 50% 34%, ${alpha(tint(primary, 0.22), 0.9)} 0%, ${shade(
+        vignette,
+        `radial-gradient(66% 50% at 50% 32%, ${alpha(tint(primary, 0.28), 0.95)} 0%, ${shade(
           primary,
-          0.15,
-        )} 44%, ${shade(primary, 0.72)} 100%)`,
+          0.3,
+        )} 46%, ${shade(primary, 0.85)} 100%)`,
       ].join(", ");
 
     case "palm":
       return [
-        `${palmLayer(a)} no-repeat 116% -12% / 52% auto`,
-        `radial-gradient(90% 60% at 80% 0%, ${alpha(a, 0.1)} 0%, transparent 55%)`,
-        `linear-gradient(165deg, ${shade(primary, 0.32)} 0%, ${shade(primary, 0.62)} 55%, ${shade(
+        `${palmLayer(a)} no-repeat 114% -10% / 60% auto`,
+        vignette,
+        `radial-gradient(85% 55% at 80% 0%, ${alpha(a, 0.14)} 0%, transparent 55%)`,
+        `linear-gradient(165deg, ${shade(primary, 0.26)} 0%, ${shade(primary, 0.58)} 55%, ${shade(
           primary,
-          0.82,
+          0.86,
         )} 100%)`,
       ].join(", ");
 
     case "blades":
       return [
-        `repeating-linear-gradient(118deg, transparent 0 46px, ${alpha(a, 0.05)} 46px 48px)`,
-        `linear-gradient(125deg, ${alpha(a, 0.14)} 0%, transparent 30%)`,
-        `linear-gradient(150deg, ${shade(primary, 0.1)} 0%, ${shade(primary, 0.72)} 100%)`,
+        `repeating-linear-gradient(118deg, transparent 0 44px, ${alpha(a, 0.06)} 44px 46px)`,
+        `linear-gradient(125deg, ${alpha(a, 0.2)} 0%, transparent 32%)`,
+        vignette,
+        `linear-gradient(150deg, ${shade(primary, 0.14)} 0%, ${shade(primary, 0.82)} 100%)`,
       ].join(", ");
 
     case "deep":
     default:
       return [
-        `radial-gradient(95% 65% at 50% -12%, ${alpha(a, 0.16)} 0%, transparent 58%)`,
-        `linear-gradient(180deg, ${shade(primary, 0.06)} 0%, ${shade(primary, 0.5)} 52%, ${shade(
+        `radial-gradient(92% 62% at 50% -12%, ${alpha(a, 0.2)} 0%, transparent 56%)`,
+        vignette,
+        `linear-gradient(180deg, ${shade(primary, 0.18)} 0%, ${shade(primary, 0.55)} 52%, ${shade(
           primary,
-          0.8,
+          0.87,
         )} 100%)`,
       ].join(", ");
   }
