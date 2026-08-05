@@ -8,6 +8,7 @@ import type {
 import { FORMAT_MAP } from "@/lib/formats";
 import { clubInitials, findClubLogo } from "@/lib/clubs";
 import { brandBackground, usesLogoWatermark } from "@/lib/brandBg";
+import { resolveTheme, type ChipToken, type Theme } from "@/lib/themes";
 
 function InlineLogo({ src, size }: { src: string | null; size: number }) {
   if (!src) return null;
@@ -51,6 +52,9 @@ export function GraphicCanvas({
   // primary for events with no accent set, preserving the original look.
   const RED = event.brandColor2 || event.brandColor;
   const fmt = FORMAT_MAP[state.format];
+  // The event's chosen Theme drives the whole "chrome" — frame, kicker, footer,
+  // chip shape, glow and texture — all still drawn in the brand colours.
+  const theme = resolveTheme(event.theme);
 
   const bg = backgrounds.find((b) => b.id === state.backgroundId);
   const rawImage =
@@ -137,18 +141,10 @@ export function GraphicCanvas({
 
       {/* Legibility scrim */}
       <div style={{ position: "absolute", inset: 0, background: scrim }} />
-      {/* Soft brand glow */}
-      <div
-        style={{
-          position: "absolute",
-          left: -160,
-          bottom: -160,
-          width: 620,
-          height: 620,
-          borderRadius: "50%",
-          background: `radial-gradient(circle, ${hexToRgba(RED, 0.28)} 0%, ${hexToRgba(RED, 0)} 68%)`,
-        }}
-      />
+      {/* Theme brand glow (placement varies by theme) */}
+      <ThemeGlow theme={theme} red={RED} />
+      {/* Theme full-bleed texture (e.g. Kit pinstripes) */}
+      <ThemeOverlay theme={theme} red={RED} />
 
       {/* Content */}
       <div
@@ -161,44 +157,14 @@ export function GraphicCanvas({
           justifyContent: "space-between",
         }}
       >
-        {/* Top kicker */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <span style={{ width: 30, height: 6, background: RED, borderRadius: 2 }} />
-            <span
-              style={{
-                fontFamily: COND,
-                fontWeight: 700,
-                fontSize: 25,
-                letterSpacing: "0.16em",
-                textTransform: "uppercase",
-              }}
-            >
-              {event.name}
-            </span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-            <span
-              style={{
-                fontFamily: COND,
-                fontWeight: 600,
-                fontSize: 23,
-                letterSpacing: "0.22em",
-                color: MUTED,
-              }}
-            >
-              {event.season}
-            </span>
-            {eventLogoSrc && state.template !== "announcement" && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={eventLogoSrc}
-                alt=""
-                style={{ height: 220, width: "auto", maxWidth: 480, objectFit: "contain" }}
-              />
-            )}
-          </div>
-        </div>
+        {/* Top kicker (marker treatment varies by theme) */}
+        <Kicker
+          theme={theme}
+          event={event}
+          red={RED}
+          showLogo={Boolean(eventLogoSrc) && state.template !== "announcement"}
+          eventLogo={eventLogoSrc}
+        />
 
         {/* Hero */}
         <div style={{ display: "flex", flexDirection: "column", gap: 30 }}>
@@ -212,6 +178,7 @@ export function GraphicCanvas({
             today={today}
             event={event}
             red={RED}
+            chip={theme.chip}
             logo={clubLogo}
             club={club}
             initials={initials}
@@ -220,41 +187,279 @@ export function GraphicCanvas({
           />
         </div>
 
-        {/* Footer */}
+        {/* Footer (divider treatment varies by theme) */}
+        <Footer theme={theme} event={event} red={RED} />
+      </div>
+
+      {/* Theme frame sits above content so its border reads as a crisp edge */}
+      <ThemeFrame theme={theme} red={RED} />
+    </div>
+  );
+}
+
+/* ------------------------------ theme chrome ----------------------------- */
+
+function ThemeGlow({ theme, red }: { theme: Theme; red: string }) {
+  const orb = (s: CSSProperties) => (
+    <div style={{ position: "absolute", borderRadius: "50%", ...s }} />
+  );
+  const bottomLeft: CSSProperties = {
+    left: -160,
+    bottom: -160,
+    width: 620,
+    height: 620,
+    background: `radial-gradient(circle, ${hexToRgba(red, 0.28)} 0%, ${hexToRgba(red, 0)} 68%)`,
+  };
+  const topRight: CSSProperties = {
+    right: -180,
+    top: -180,
+    width: 560,
+    height: 560,
+    background: `radial-gradient(circle, ${hexToRgba(red, 0.22)} 0%, ${hexToRgba(red, 0)} 68%)`,
+  };
+  const topCentre: CSSProperties = {
+    left: "50%",
+    top: -300,
+    marginLeft: -380,
+    width: 760,
+    height: 620,
+    background: `radial-gradient(circle, ${hexToRgba(red, 0.2)} 0%, ${hexToRgba(red, 0)} 66%)`,
+  };
+  switch (theme.glow) {
+    case "none":
+      return null;
+    case "top":
+      return orb(topCentre);
+    case "split":
+      return (
+        <>
+          {orb(bottomLeft)}
+          {orb(topRight)}
+        </>
+      );
+    case "corner":
+    default:
+      return orb(bottomLeft);
+  }
+}
+
+function ThemeOverlay({ theme, red }: { theme: Theme; red: string }) {
+  if (theme.overlay !== "pinstripe") return null;
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        pointerEvents: "none",
+        background: `repeating-linear-gradient(45deg, ${hexToRgba(red, 0.07)} 0 2px, transparent 2px 24px)`,
+      }}
+    />
+  );
+}
+
+function ThemeFrame({ theme, red }: { theme: Theme; red: string }) {
+  if (theme.frame === "inset") {
+    return (
+      <>
         <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            borderTop: "2px solid rgba(255,255,255,0.14)",
-            paddingTop: 22,
+            position: "absolute",
+            inset: 26,
+            border: `2px solid ${hexToRgba(red, 0.55)}`,
+            borderRadius: 6,
+            pointerEvents: "none",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            inset: 34,
+            border: "1px solid rgba(255,255,255,0.16)",
+            borderRadius: 3,
+            pointerEvents: "none",
+          }}
+        />
+      </>
+    );
+  }
+  if (theme.frame === "brackets") {
+    const len = 120;
+    const th = 9;
+    const off = 30;
+    const bar = (s: CSSProperties, key: string) => (
+      <span key={key} style={{ position: "absolute", background: red, ...s }} />
+    );
+    return (
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+        {bar({ left: off, top: off, width: len, height: th }, "tl-h")}
+        {bar({ left: off, top: off, width: th, height: len }, "tl-v")}
+        {bar({ right: off, top: off, width: len, height: th }, "tr-h")}
+        {bar({ right: off, top: off, width: th, height: len }, "tr-v")}
+        {bar({ left: off, bottom: off, width: len, height: th }, "bl-h")}
+        {bar({ left: off, bottom: off, width: th, height: len }, "bl-v")}
+        {bar({ right: off, bottom: off, width: len, height: th }, "br-h")}
+        {bar({ right: off, bottom: off, width: th, height: len }, "br-v")}
+      </div>
+    );
+  }
+  return null;
+}
+
+function Kicker({
+  theme,
+  event,
+  red,
+  showLogo,
+  eventLogo,
+}: {
+  theme: Theme;
+  event: EventBrand;
+  red: string;
+  showLogo: boolean;
+  eventLogo: string | null;
+}) {
+  const name: CSSProperties = {
+    fontFamily: COND,
+    fontWeight: 700,
+    fontSize: 25,
+    letterSpacing: "0.16em",
+    textTransform: "uppercase",
+  };
+  let left: React.ReactNode;
+  switch (theme.kicker) {
+    case "block":
+      left = (
+        <span
+          style={{
+            ...name,
+            color: "#0b1020",
+            background: red,
+            borderRadius: 4,
+            padding: "9px 18px",
+            boxShadow: "0 6px 18px rgba(0,0,0,0.3)",
           }}
         >
+          {event.name}
+        </span>
+      );
+      break;
+    case "chevron":
+      left = (
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <span
             style={{
-              fontFamily: DISPLAY,
-              fontSize: 30,
-              letterSpacing: "0.02em",
-              color: RED,
-              fontStyle: "italic",
+              width: 24,
+              height: 26,
+              background: red,
+              clipPath: "polygon(0 0, 100% 50%, 0 100%)",
             }}
-          >
-            {event.hashtag}
-          </span>
-          <span
-            style={{
-              fontFamily: COND,
-              fontWeight: 600,
-              fontSize: 20,
-              letterSpacing: "0.2em",
-              textTransform: "uppercase",
-              color: MUTED,
-            }}
-          >
-            Powered by {event.organizer}
-          </span>
+          />
+          <span style={name}>{event.name}</span>
         </div>
+      );
+      break;
+    case "rule":
+      left = (
+        <span
+          style={{ ...name, paddingBottom: 9, borderBottom: `2px solid ${hexToRgba(red, 0.75)}` }}
+        >
+          {event.name}
+        </span>
+      );
+      break;
+    case "tall":
+      left = (
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <span style={{ width: 12, height: 42, background: red, borderRadius: 2 }} />
+          <span style={{ ...name, fontSize: 28 }}>{event.name}</span>
+        </div>
+      );
+      break;
+    case "bar":
+    default:
+      left = (
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <span style={{ width: 30, height: 6, background: red, borderRadius: 2 }} />
+          <span style={name}>{event.name}</span>
+        </div>
+      );
+  }
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      {left}
+      <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+        <span
+          style={{
+            fontFamily: COND,
+            fontWeight: 600,
+            fontSize: 23,
+            letterSpacing: "0.22em",
+            color: MUTED,
+          }}
+        >
+          {event.season}
+        </span>
+        {showLogo && eventLogo && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={eventLogo}
+            alt=""
+            style={{ height: 220, width: "auto", maxWidth: 480, objectFit: "contain" }}
+          />
+        )}
       </div>
+    </div>
+  );
+}
+
+function Footer({
+  theme,
+  event,
+  red,
+}: {
+  theme: Theme;
+  event: EventBrand;
+  red: string;
+}) {
+  const borderTop =
+    theme.footer === "solid"
+      ? `3px solid ${red}`
+      : theme.footer === "double"
+        ? `4px double ${hexToRgba(red, 0.75)}`
+        : "2px solid rgba(255,255,255,0.14)";
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        borderTop,
+        paddingTop: 22,
+      }}
+    >
+      <span
+        style={{
+          fontFamily: DISPLAY,
+          fontSize: 30,
+          letterSpacing: "0.02em",
+          color: red,
+          fontStyle: "italic",
+        }}
+      >
+        {event.hashtag}
+      </span>
+      <span
+        style={{
+          fontFamily: COND,
+          fontWeight: 600,
+          fontSize: 20,
+          letterSpacing: "0.2em",
+          textTransform: "uppercase",
+          color: MUTED,
+        }}
+      >
+        Powered by {event.organizer}
+      </span>
     </div>
   );
 }
@@ -340,7 +545,40 @@ const subline: CSSProperties = {
   color: MUTED,
 };
 
-function Chip({ children, red }: { children: React.ReactNode; red: string }) {
+/** Theme-specific shape overrides layered on top of the base chip style. */
+function chipShape(chip: ChipToken, red: string): CSSProperties {
+  switch (chip) {
+    case "square":
+      return { borderRadius: 6 };
+    case "cut":
+      return {
+        borderRadius: 0,
+        clipPath:
+          "polygon(11px 0, 100% 0, 100% calc(100% - 11px), calc(100% - 11px) 100%, 0 100%, 0 11px)",
+      };
+    case "line":
+      return {
+        borderRadius: 0,
+        background: "transparent",
+        border: "none",
+        borderBottom: `3px solid ${hexToRgba(red, 0.8)}`,
+        padding: "6px 4px",
+      };
+    case "pill":
+    default:
+      return { borderRadius: 999 };
+  }
+}
+
+function Chip({
+  children,
+  red,
+  chip = "pill",
+}: {
+  children: React.ReactNode;
+  red: string;
+  chip?: ChipToken;
+}) {
   return (
     <span
       style={{
@@ -353,8 +591,8 @@ function Chip({ children, red }: { children: React.ReactNode; red: string }) {
         color: INK,
         background: hexToRgba(red, 0.16),
         border: `1.5px solid ${hexToRgba(red, 0.55)}`,
-        borderRadius: 999,
         padding: "10px 22px",
+        ...chipShape(chip, red),
       }}
     >
       {children}
@@ -367,6 +605,7 @@ function TemplateBody({
   today,
   event,
   red,
+  chip,
   logo,
   club,
   initials,
@@ -377,6 +616,7 @@ function TemplateBody({
   today: string | null;
   event: EventBrand;
   red: string;
+  chip: ChipToken;
   logo: string | null;
   club: string;
   initials: string;
@@ -441,7 +681,7 @@ function TemplateBody({
           <div style={subline}>Officially headed to the {event.shortName}</div>
           {state.ageGroup && (
             <div>
-              <Chip red={red}>{state.ageGroup}</Chip>
+              <Chip red={red} chip={chip}>{state.ageGroup}</Chip>
             </div>
           )}
         </div>
@@ -478,9 +718,9 @@ function TemplateBody({
             <span>{state.opponent || "Opponent"}</span>
           </div>
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-            {state.kickoff && <Chip red={red}>{state.kickoff}</Chip>}
-            {state.field && <Chip red={red}>{state.field}</Chip>}
-            {state.ageGroup && <Chip red={red}>{state.ageGroup}</Chip>}
+            {state.kickoff && <Chip red={red} chip={chip}>{state.kickoff}</Chip>}
+            {state.field && <Chip red={red} chip={chip}>{state.field}</Chip>}
+            {state.ageGroup && <Chip red={red} chip={chip}>{state.ageGroup}</Chip>}
           </div>
         </div>
       );
@@ -679,8 +919,8 @@ function TemplateBody({
               justifyContent: "center",
             }}
           >
-            {event.startDateIso && <Chip red={red}>{formatDate(event.startDateIso)}</Chip>}
-            {event.venue && <Chip red={red}>{event.venue}</Chip>}
+            {event.startDateIso && <Chip red={red} chip={chip}>{formatDate(event.startDateIso)}</Chip>}
+            {event.venue && <Chip red={red} chip={chip}>{event.venue}</Chip>}
           </div>
         </div>
       );

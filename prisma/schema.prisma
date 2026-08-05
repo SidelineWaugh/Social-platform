@@ -26,6 +26,9 @@ model Event {
   brandColor2 String? // accent/secondary — used by the code-drawn Brand Kit backgrounds
   logoUrl     String?
 
+  // Head-to-toe "chrome" look for this event's graphics (see lib/themes.ts).
+  theme String @default("classic")
+
   // Which of the code-defined templates are enabled for this event.
   enabledTemplates String[] @default(["were-in", "champions", "matchday", "bracket", "schedule", "result", "countdown", "announcement"])
 

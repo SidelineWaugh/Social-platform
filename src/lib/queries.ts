@@ -7,6 +7,7 @@ import type {
   TemplateId,
 } from "./types";
 import { findClubLogo } from "./clubs";
+import { resolveTheme } from "./themes";
 import type { Event as PrismaEvent } from "@prisma/client";
 
 export function toBrand(e: PrismaEvent): EventBrand {
@@ -22,6 +23,7 @@ export function toBrand(e: PrismaEvent): EventBrand {
     logoUrl: e.logoUrl,
     venue: e.venue,
     startDateIso: e.startDate ? e.startDate.toISOString().slice(0, 10) : null,
+    theme: resolveTheme(e.theme).key,
     enabledTemplates: e.enabledTemplates as TemplateId[],
   };
 }

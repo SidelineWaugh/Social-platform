@@ -10,6 +10,15 @@ export type TemplateId =
 
 export type FormatId = "portrait" | "square" | "story";
 
+/** A per-event chrome look; see lib/themes.ts for the concrete definitions. */
+export type ThemeKey =
+  | "classic"
+  | "broadcast"
+  | "crest"
+  | "kit"
+  | "stadium"
+  | "minimal";
+
 export interface Club {
   id: string;
   name: string;
@@ -28,6 +37,7 @@ export interface EventBrand {
   logoUrl: string | null;
   venue: string | null;
   startDateIso: string | null; // yyyy-mm-dd, for the countdown default
+  theme: ThemeKey;
   enabledTemplates: TemplateId[];
 }
 
