@@ -26,7 +26,7 @@ const CLUBS = [
 const BRAND_STYLES = [
   { key: "deep", label: "Deep" },
   { key: "spotlight", label: "Spotlight" },
-  { key: "palm", label: "Palm" },
+  { key: "crest", label: "Crest" },
   { key: "blades", label: "Blades" },
 ];
 

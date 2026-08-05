@@ -8,18 +8,26 @@
  * live graphic, the picker swatches, and the admin previews so they always match.
  */
 
-export const BRAND_STYLE_KEYS = ["deep", "spotlight", "palm", "blades"] as const;
+export const BRAND_STYLE_KEYS = ["deep", "spotlight", "crest", "blades"] as const;
 export type BrandStyleKey = (typeof BRAND_STYLE_KEYS)[number];
 
 export const BRAND_STYLES: { key: BrandStyleKey; label: string }[] = [
   { key: "deep", label: "Deep" },
   { key: "spotlight", label: "Spotlight" },
-  { key: "palm", label: "Palm" },
+  { key: "crest", label: "Crest" },
   { key: "blades", label: "Blades" },
 ];
 
 export function isBrandStyle(v: string): v is BrandStyleKey {
   return (BRAND_STYLE_KEYS as readonly string[]).includes(v);
+}
+
+/**
+ * The "crest" style renders the event logo as a large faded watermark (drawn in
+ * the canvas, which has the logo). "palm" is the legacy key for the same slot.
+ */
+export function usesLogoWatermark(style: string): boolean {
+  return style === "crest" || style === "palm";
 }
 
 /* ------------------------------- colour math ------------------------------ */
@@ -78,28 +86,6 @@ export function deriveAccent(primary: string): string {
   return tint(primary, 0.55);
 }
 
-/* -------------------------------- palm SVG -------------------------------- */
-
-/** A stylised palm silhouette, tinted with the accent colour, for the "palm" style. */
-function palmLayer(accent: string): string {
-  const fill = alpha(accent, 0.12);
-  const svg =
-    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'>` +
-    `<g fill='${fill}'>` +
-    // trunk
-    `<path d='M99 74 C104 108 112 140 128 190 L138 190 C120 140 112 108 110 74 Z'/>` +
-    // fronds radiating from the crown (~100,72)
-    `<path d='M100 72 C60 40 26 40 4 58 C34 52 66 58 100 78 Z'/>` +
-    `<path d='M100 72 C140 40 174 40 196 58 C166 52 134 58 100 78 Z'/>` +
-    `<path d='M100 72 C70 30 44 16 20 14 C48 26 74 46 100 80 Z'/>` +
-    `<path d='M100 72 C130 30 156 16 180 14 C152 26 126 46 100 80 Z'/>` +
-    `<path d='M100 72 C92 34 86 18 92 2 C100 24 104 46 104 78 Z'/>` +
-    `<path d='M100 72 C108 34 114 18 108 2 C100 24 96 46 96 78 Z'/>` +
-    `<circle cx='100' cy='72' r='7'/>` +
-    `</g></svg>`;
-  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-}
-
 /* --------------------------------- styles --------------------------------- */
 
 /**
@@ -131,12 +117,14 @@ export function brandBackground(
         )} 46%, ${shade(primary, 0.85)} 100%)`,
       ].join(", ");
 
+    // "crest" (and legacy "palm"): deep base; the event logo watermark is drawn
+    // on top by the canvas. A soft off-centre glow gives the mark something to sit in.
+    case "crest":
     case "palm":
       return [
-        `${palmLayer(a)} no-repeat 114% -10% / 60% auto`,
         vignette,
-        `radial-gradient(85% 55% at 80% 0%, ${alpha(a, 0.14)} 0%, transparent 55%)`,
-        `linear-gradient(165deg, ${shade(primary, 0.26)} 0%, ${shade(primary, 0.58)} 55%, ${shade(
+        `radial-gradient(80% 60% at 68% 42%, ${alpha(a, 0.14)} 0%, transparent 58%)`,
+        `linear-gradient(165deg, ${shade(primary, 0.2)} 0%, ${shade(primary, 0.56)} 55%, ${shade(
           primary,
           0.86,
         )} 100%)`,

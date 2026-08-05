@@ -7,7 +7,7 @@ import type {
 } from "@/lib/types";
 import { FORMAT_MAP } from "@/lib/formats";
 import { clubInitials, findClubLogo } from "@/lib/clubs";
-import { brandBackground } from "@/lib/brandBg";
+import { brandBackground, usesLogoWatermark } from "@/lib/brandBg";
 
 function InlineLogo({ src, size }: { src: string | null; size: number }) {
   if (!src) return null;
@@ -82,6 +82,10 @@ export function GraphicCanvas({
     ? "linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.04) 42%, rgba(0,0,0,0.50) 82%, rgba(0,0,0,0.64) 100%)"
     : "linear-gradient(180deg, rgba(8,12,22,0.30) 0%, rgba(8,12,22,0.35) 38%, rgba(7,10,18,0.82) 82%, rgba(6,9,16,0.95) 100%)";
 
+  // The "Crest" brand style renders the event logo as a large faded watermark —
+  // the club's own mark behind the content, which always reads on-brand.
+  const showWatermark = Boolean(isBrand && usesLogoWatermark(bg!.value) && eventLogoSrc);
+
   const initials = clubInitials(state.clubName || "FC");
   const club = state.clubName?.trim() || "Your Club";
   const pad = fmt.id === "square" ? 66 : 76;
@@ -128,6 +132,26 @@ export function GraphicCanvas({
         }}
       />
 
+      {/* Event-logo watermark (Crest brand style) */}
+      {showWatermark && eventLogoSrc && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={eventLogoSrc}
+          alt=""
+          style={{
+            position: "absolute",
+            top: "50%",
+            right: "-10%",
+            transform: "translateY(-50%)",
+            width: "88%",
+            height: "auto",
+            objectFit: "contain",
+            opacity: 0.1,
+            filter: "brightness(0) invert(1)",
+          }}
+        />
+      )}
+
       {/* Content */}
       <div
         style={{
@@ -172,7 +196,7 @@ export function GraphicCanvas({
               <img
                 src={eventLogoSrc}
                 alt=""
-                style={{ height: 74, width: "auto", maxWidth: 210, objectFit: "contain" }}
+                style={{ height: 104, width: "auto", maxWidth: 280, objectFit: "contain" }}
               />
             )}
           </div>
