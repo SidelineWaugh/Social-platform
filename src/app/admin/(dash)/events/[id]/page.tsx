@@ -46,7 +46,7 @@ export default async function EventEditor({
     },
     nokey: {
       tone: "border-amber-500/30 bg-amber-500/10 text-amber-400",
-      msg: "Colour extraction isn't configured — add an ANTHROPIC_API_KEY in Render to enable it.",
+      msg: "Colour extraction isn't configured — add an ANTHROPIC_API_KEY variable in your host (Railway) to enable it.",
     },
     nologo: {
       tone: "border-amber-500/30 bg-amber-500/10 text-amber-400",
