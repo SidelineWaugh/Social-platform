@@ -8,7 +8,13 @@ import type {
 import { FORMAT_MAP } from "@/lib/formats";
 import { clubInitials, findClubLogo } from "@/lib/clubs";
 import { brandBackground, usesLogoWatermark } from "@/lib/brandBg";
-import { resolveTheme, type ChipToken, type Theme } from "@/lib/themes";
+import {
+  resolveTheme,
+  FONT_FAMILY,
+  DISPLAY_META,
+  type ChipToken,
+  type Theme,
+} from "@/lib/themes";
 
 function InlineLogo({ src, size }: { src: string | null; size: number }) {
   if (!src) return null;
@@ -52,9 +58,24 @@ export function GraphicCanvas({
   // primary for events with no accent set, preserving the original look.
   const RED = event.brandColor2 || event.brandColor;
   const fmt = FORMAT_MAP[state.format];
-  // The event's chosen Theme drives the whole "chrome" — frame, kicker, footer,
-  // chip shape, glow and texture — all still drawn in the brand colours.
+  // The event's chosen Theme drives the whole "chrome" — typography, wording
+  // position, frame, kicker, footer, chip shape, glow and texture — all still
+  // drawn in the brand colours.
   const theme = resolveTheme(event.theme);
+  const dmeta = DISPLAY_META[theme.type.display];
+  // Theme typography is applied by overriding the font CSS variables (and a few
+  // headline tuning vars) on this canvas subtree, so every descendant that
+  // references them re-fonts at once — no per-element threading required.
+  const fontVars = {
+    ["--font-display"]: FONT_FAMILY[theme.type.display],
+    ["--font-cond"]: FONT_FAMILY[theme.type.label],
+    ["--hl-weight"]: String(dmeta.weight),
+    ["--hl-lead"]: String(dmeta.lead),
+    ["--hl-space"]: dmeta.space,
+  } as CSSProperties;
+  // Where the hero wording sits between the fixed kicker (top) and footer.
+  const heroJustify =
+    theme.anchor === "top" ? "flex-start" : theme.anchor === "bottom" ? "flex-end" : "center";
 
   const bg = backgrounds.find((b) => b.id === state.backgroundId);
   const rawImage =
@@ -104,6 +125,7 @@ export function GraphicCanvas({
         background: imageUrl ? "#0b1020" : gradient,
         color: INK,
         fontFamily: SANS,
+        ...fontVars,
       }}
     >
       {imageUrl && (
@@ -146,7 +168,8 @@ export function GraphicCanvas({
       {/* Theme full-bleed texture (e.g. Kit pinstripes) */}
       <ThemeOverlay theme={theme} red={RED} />
 
-      {/* Content */}
+      {/* Content: kicker pinned top, footer pinned bottom, hero anchored in
+          the space between per the theme (top / centre / bottom). */}
       <div
         style={{
           position: "absolute",
@@ -154,7 +177,6 @@ export function GraphicCanvas({
           padding: pad,
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
         }}
       >
         {/* Top kicker (marker treatment varies by theme) */}
@@ -167,7 +189,18 @@ export function GraphicCanvas({
         />
 
         {/* Hero */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 30 }}>
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: heroJustify,
+            gap: 30,
+            paddingTop: 30,
+            paddingBottom: 30,
+          }}
+        >
           {state.template !== "were-in" &&
             state.template !== "bracket" &&
             state.template !== "announcement" && (
@@ -244,17 +277,34 @@ function ThemeGlow({ theme, red }: { theme: Theme; red: string }) {
 }
 
 function ThemeOverlay({ theme, red }: { theme: Theme; red: string }) {
-  if (theme.overlay !== "pinstripe") return null;
-  return (
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        pointerEvents: "none",
-        background: `repeating-linear-gradient(45deg, ${hexToRgba(red, 0.07)} 0 2px, transparent 2px 24px)`,
-      }}
-    />
-  );
+  if (theme.overlay === "pinstripe") {
+    return (
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          background: `repeating-linear-gradient(45deg, ${hexToRgba(red, 0.07)} 0 2px, transparent 2px 24px)`,
+        }}
+      />
+    );
+  }
+  if (theme.overlay === "grid") {
+    // A faint pitch/board grid drawn from the accent colour.
+    const line = hexToRgba(red, 0.06);
+    return (
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          backgroundImage: `linear-gradient(${line} 1px, transparent 1px), linear-gradient(90deg, ${line} 1px, transparent 1px)`,
+          backgroundSize: "72px 72px",
+        }}
+      />
+    );
+  }
+  return null;
 }
 
 function ThemeFrame({ theme, red }: { theme: Theme; red: string }) {
@@ -299,6 +349,37 @@ function ThemeFrame({ theme, red }: { theme: Theme; red: string }) {
         {bar({ left: off, bottom: off, width: th, height: len }, "bl-v")}
         {bar({ right: off, bottom: off, width: len, height: th }, "br-h")}
         {bar({ right: off, bottom: off, width: th, height: len }, "br-v")}
+      </div>
+    );
+  }
+  if (theme.frame === "sidebar") {
+    // A single accent stripe down the left edge — poster spine.
+    return (
+      <span
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 14,
+          background: `linear-gradient(180deg, ${red} 0%, ${hexToRgba(red, 0.55)} 100%)`,
+          pointerEvents: "none",
+        }}
+      />
+    );
+  }
+  if (theme.frame === "rails") {
+    // Full-width accent rails top and bottom — broadcast strap.
+    const rail = (s: CSSProperties, key: string) => (
+      <span
+        key={key}
+        style={{ position: "absolute", left: 0, right: 0, height: 12, background: red, ...s }}
+      />
+    );
+    return (
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+        {rail({ top: 0 }, "top")}
+        {rail({ bottom: 0 }, "bottom")}
       </div>
     );
   }
@@ -421,20 +502,33 @@ function Footer({
   event: EventBrand;
   red: string;
 }) {
-  const borderTop =
-    theme.footer === "solid"
+  const isTicker = theme.footer === "ticker";
+  const borderTop = isTicker
+    ? "none"
+    : theme.footer === "solid"
       ? `3px solid ${red}`
       : theme.footer === "double"
         ? `4px double ${hexToRgba(red, 0.75)}`
         : "2px solid rgba(255,255,255,0.14)";
   return (
+    <>
+      {isTicker && (
+        // A dashed accent measure above the footer — broadcast ticker.
+        <div
+          style={{
+            height: 8,
+            marginBottom: 18,
+            background: `repeating-linear-gradient(90deg, ${red} 0 18px, transparent 18px 30px)`,
+          }}
+        />
+      )}
     <div
       style={{
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
         borderTop,
-        paddingTop: 22,
+        paddingTop: isTicker ? 0 : 22,
       }}
     >
       <span
@@ -461,6 +555,7 @@ function Footer({
         Powered by {event.organizer}
       </span>
     </div>
+    </>
   );
 }
 
@@ -530,8 +625,11 @@ function ClubEyebrow({
 
 const headline: CSSProperties = {
   fontFamily: DISPLAY,
-  lineHeight: 0.86,
-  letterSpacing: "0.005em",
+  // Weight / leading / tracking come from the theme's display face (set as CSS
+  // vars on the canvas root); fallbacks reproduce the original Anton tuning.
+  fontWeight: "var(--hl-weight, 400)" as unknown as number,
+  lineHeight: "var(--hl-lead, 0.86)" as unknown as number,
+  letterSpacing: "var(--hl-space, 0.005em)",
   textTransform: "uppercase",
   margin: 0,
 };

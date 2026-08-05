@@ -17,7 +17,13 @@ export type ThemeKey =
   | "crest"
   | "kit"
   | "stadium"
-  | "minimal";
+  | "minimal"
+  | "terrace"
+  | "wire"
+  | "editorial"
+  | "chalk"
+  | "pitch"
+  | "anthem";
 
 export interface Club {
   id: string;

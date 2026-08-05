@@ -6,7 +6,7 @@ import { TEMPLATES } from "@/lib/templates";
 import { clubInitials } from "@/lib/clubs";
 import { ImageUploadForm } from "@/components/admin/ImageUploadForm";
 import { brandBackground } from "@/lib/brandBg";
-import { THEMES, type Theme } from "@/lib/themes";
+import { THEMES, FONT_FAMILY, DISPLAY_META, type Theme } from "@/lib/themes";
 import {
   updateEventAction,
   setEventLogoAction,
@@ -656,6 +656,14 @@ function ThemePreviewMini({
   accent: string;
 }) {
   const ghost = "rgba(255,255,255,0.5)";
+  const dmeta = DISPLAY_META[theme.type.display];
+  // Override the font vars on this preview so the marker, headline and chip
+  // text all render in the theme's actual faces.
+  const fontVars = {
+    ["--font-display"]: FONT_FAMILY[theme.type.display],
+    ["--font-cond"]: FONT_FAMILY[theme.type.label],
+  } as CSSProperties;
+  const labelText: CSSProperties = { fontFamily: "var(--font-cond)" };
 
   let marker: React.ReactNode;
   switch (theme.kicker) {
@@ -663,13 +671,14 @@ function ThemePreviewMini({
       marker = (
         <span
           style={{
+            ...labelText,
             background: accent,
             color: "#0b1020",
-            fontSize: 6,
-            fontWeight: 800,
+            fontSize: 6.5,
+            fontWeight: 700,
             padding: "2px 5px",
             borderRadius: 2,
-            letterSpacing: "0.1em",
+            letterSpacing: "0.08em",
           }}
         >
           EVENT
@@ -682,7 +691,9 @@ function ThemePreviewMini({
           <span
             style={{ width: 7, height: 8, background: accent, clipPath: "polygon(0 0,100% 50%,0 100%)" }}
           />
-          <span style={{ width: 34, height: 4, background: ghost, borderRadius: 1 }} />
+          <span style={{ ...labelText, fontSize: 6.5, fontWeight: 700, letterSpacing: "0.08em", color: "#e7ecf7" }}>
+            EVENT
+          </span>
         </span>
       );
       break;
@@ -690,22 +701,27 @@ function ThemePreviewMini({
       marker = (
         <span
           style={{
+            ...labelText,
             display: "inline-block",
-            width: 42,
-            height: 4,
-            background: ghost,
-            borderRadius: 1,
-            paddingBottom: 4,
+            fontSize: 6.5,
+            fontWeight: 700,
+            letterSpacing: "0.08em",
+            color: "#e7ecf7",
+            paddingBottom: 3,
             borderBottom: `2px solid ${pvAlpha(accent, 0.85)}`,
           }}
-        />
+        >
+          EVENT
+        </span>
       );
       break;
     case "tall":
       marker = (
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-          <span style={{ width: 4, height: 14, background: accent, borderRadius: 1 }} />
-          <span style={{ width: 40, height: 5, background: ghost, borderRadius: 1 }} />
+          <span style={{ width: 4, height: 13, background: accent, borderRadius: 1 }} />
+          <span style={{ ...labelText, fontSize: 6.5, fontWeight: 700, letterSpacing: "0.08em", color: "#e7ecf7" }}>
+            EVENT
+          </span>
         </span>
       );
       break;
@@ -714,7 +730,9 @@ function ThemePreviewMini({
       marker = (
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
           <span style={{ width: 12, height: 3, background: accent, borderRadius: 1 }} />
-          <span style={{ width: 34, height: 4, background: ghost, borderRadius: 1 }} />
+          <span style={{ ...labelText, fontSize: 6.5, fontWeight: 700, letterSpacing: "0.08em", color: "#e7ecf7" }}>
+            EVENT
+          </span>
         </span>
       );
   }
@@ -738,22 +756,27 @@ function ThemePreviewMini({
             }
           : { borderRadius: 999 };
 
+  const heroJustify =
+    theme.anchor === "top" ? "flex-start" : theme.anchor === "bottom" ? "flex-end" : "center";
+
   const footerBorder =
     theme.footer === "solid"
       ? `2px solid ${accent}`
       : theme.footer === "double"
         ? `3px double ${pvAlpha(accent, 0.85)}`
-        : "1px solid rgba(255,255,255,0.2)";
+        : theme.footer === "ticker"
+          ? "none"
+          : "1px solid rgba(255,255,255,0.2)";
 
   return (
     <div
       style={{
+        ...fontVars,
         position: "relative",
-        height: 96,
+        height: 104,
         padding: 11,
         display: "flex",
         flexDirection: "column",
-        justifyContent: "space-between",
         background: brandBackground("deep", primary, accent),
         overflow: "hidden",
       }}
@@ -768,19 +791,52 @@ function ThemePreviewMini({
           }}
         />
       )}
+      {theme.overlay === "grid" && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            pointerEvents: "none",
+            backgroundImage: `linear-gradient(${pvAlpha(accent, 0.08)} 1px, transparent 1px), linear-gradient(90deg, ${pvAlpha(accent, 0.08)} 1px, transparent 1px)`,
+            backgroundSize: "16px 16px",
+          }}
+        />
+      )}
 
       <div style={{ position: "relative" }}>{marker}</div>
 
-      <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 4 }}>
-        <span style={{ width: "72%", height: 9, background: "rgba(255,255,255,0.85)", borderRadius: 2 }} />
-        <span style={{ width: "48%", height: 9, background: "rgba(255,255,255,0.85)", borderRadius: 2 }} />
+      <div
+        style={{
+          position: "relative",
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: heroJustify,
+          gap: 3,
+          padding: "5px 0",
+        }}
+      >
         <span
           style={{
-            marginTop: 2,
+            fontFamily: "var(--font-display)",
+            fontWeight: dmeta.weight,
+            fontSize: 21,
+            lineHeight: dmeta.lead,
+            letterSpacing: dmeta.space,
+            textTransform: "uppercase",
+            color: "#f7f9ff",
+          }}
+        >
+          Matchday
+        </span>
+        <span
+          style={{
+            ...labelText,
             alignSelf: "flex-start",
             fontSize: 6,
-            fontWeight: 800,
-            letterSpacing: "0.08em",
+            fontWeight: 700,
+            letterSpacing: "0.06em",
             color: "#f3f5fb",
             padding: "2px 6px",
             background: theme.chip === "line" ? "transparent" : pvAlpha(accent, 0.16),
@@ -792,11 +848,21 @@ function ThemePreviewMini({
         </span>
       </div>
 
+      {theme.footer === "ticker" && (
+        <span
+          style={{
+            position: "relative",
+            height: 4,
+            marginBottom: 4,
+            background: `repeating-linear-gradient(90deg, ${accent} 0 8px, transparent 8px 14px)`,
+          }}
+        />
+      )}
       <div
         style={{
           position: "relative",
           borderTop: footerBorder,
-          paddingTop: 5,
+          paddingTop: theme.footer === "ticker" ? 0 : 5,
           display: "flex",
           justifyContent: "space-between",
         }}
@@ -815,6 +881,25 @@ function ThemePreviewMini({
             pointerEvents: "none",
           }}
         />
+      )}
+      {theme.frame === "sidebar" && (
+        <span
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 5,
+            background: `linear-gradient(180deg, ${accent}, ${pvAlpha(accent, 0.55)})`,
+            pointerEvents: "none",
+          }}
+        />
+      )}
+      {theme.frame === "rails" && (
+        <>
+          <span style={{ position: "absolute", left: 0, right: 0, top: 0, height: 4, background: accent }} />
+          <span style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 4, background: accent }} />
+        </>
       )}
       {theme.frame === "brackets" && <MiniBrackets accent={accent} />}
     </div>
