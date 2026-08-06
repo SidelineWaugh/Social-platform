@@ -977,7 +977,12 @@ function TemplateBody({
       );
     }
 
-    case "announcement":
+    case "announcement": {
+      const square = state.format === "square";
+      // When the toggle is on and the event has a logo, the tournament logo is
+      // the hero — blown up large, with the text event-name suppressed (the mark
+      // carries the identity). Otherwise fall back to the wordmark layout.
+      const bigLogo = state.announceBigLogo && Boolean(eventLogo);
       return (
         <div
           style={{
@@ -994,20 +999,20 @@ function TemplateBody({
               src={eventLogo}
               alt=""
               style={{
-                maxWidth: 580,
-                maxHeight: state.format === "square" ? 250 : 330,
+                maxWidth: bigLogo ? (square ? 760 : 880) : 580,
+                maxHeight: bigLogo ? (square ? 620 : 760) : square ? 250 : 330,
                 objectFit: "contain",
                 marginBottom: 6,
-                filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.55))",
+                filter: "drop-shadow(0 12px 34px rgba(0,0,0,0.6))",
               }}
             />
           )}
           <div style={{ ...subline, color: red, fontWeight: 700, fontSize: 34 }}>
             {state.announceHeadline || "Save The Date"}
           </div>
-          <h1 style={{ ...headline, fontSize: state.format === "square" ? 92 : 108 }}>
-            {event.name}
-          </h1>
+          {!bigLogo && (
+            <h1 style={{ ...headline, fontSize: square ? 92 : 108 }}>{event.name}</h1>
+          )}
           {state.announceSubtext && <div style={subline}>{state.announceSubtext}</div>}
           <div
             style={{
@@ -1022,6 +1027,7 @@ function TemplateBody({
           </div>
         </div>
       );
+    }
 
     default:
       return null;

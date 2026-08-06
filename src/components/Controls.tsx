@@ -59,6 +59,49 @@ const inputClass =
   "placeholder:text-ink-faint outline-none transition focus:border-brand/70 " +
   "focus:ring-2 focus:ring-brand/25";
 
+/** A labelled on/off switch styled to the studio chrome. */
+function Toggle({
+  checked,
+  onChange,
+  label,
+  hint,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+  hint?: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className="flex w-full items-center justify-between gap-3 rounded-lg border border-line bg-input/60 px-3.5 py-3 text-left transition hover:border-line-strong"
+    >
+      <span className="flex flex-col">
+        <span className="font-cond text-[13px] font-bold uppercase tracking-[0.1em] text-ink">
+          {label}
+        </span>
+        {hint && <span className="mt-0.5 text-[11px] leading-snug text-ink-faint">{hint}</span>}
+      </span>
+      <span
+        className={
+          "relative h-6 w-11 shrink-0 rounded-full transition " +
+          (checked ? "bg-brand" : "bg-line-strong")
+        }
+      >
+        <span
+          className={
+            "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all " +
+            (checked ? "left-[22px]" : "left-0.5")
+          }
+        />
+      </span>
+    </button>
+  );
+}
+
 /* ------------------------------- template ------------------------------- */
 
 function TemplateSection({ state, update, event }: SectionProps) {
@@ -236,7 +279,7 @@ function BackgroundSection({ state, update, event, backgrounds }: SectionProps) 
 
 /* -------------------------------- details ------------------------------- */
 
-function DetailsSection({ state, update, clubs }: SectionProps) {
+function DetailsSection({ state, update, clubs, event }: SectionProps) {
   const listId = useId();
   const clubDatalist = (
     <datalist id={listId}>
@@ -428,6 +471,16 @@ function DetailsSection({ state, update, clubs }: SectionProps) {
 
         {state.template === "announcement" && (
           <>
+            <Toggle
+              checked={state.announceBigLogo}
+              onChange={(v) => update({ announceBigLogo: v })}
+              label="Feature tournament logo"
+              hint={
+                event.logoUrl
+                  ? "Blow up the event logo as the hero of the post."
+                  : "Add an event logo in Admin, then this heroes it big."
+              }
+            />
             <Field label="Headline">
               <input
                 className={inputClass}

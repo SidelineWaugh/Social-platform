@@ -73,6 +73,7 @@ export function Studio({
     bracketTeams: bracketSource.slice(0, 8).map((o) => o.name),
     announceHeadline: "Registration Open",
     announceSubtext: "",
+    announceBigLogo: true,
   }));
 
   const [today, setToday] = useState<string | null>(null);

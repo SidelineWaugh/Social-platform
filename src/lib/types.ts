@@ -113,4 +113,5 @@ export interface GraphicState {
   // announcement (event-level)
   announceHeadline: string; // "Registration Open"
   announceSubtext: string; // optional tagline
+  announceBigLogo: boolean; // hero the tournament logo, blown up
 }
