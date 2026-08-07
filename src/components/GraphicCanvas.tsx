@@ -1104,7 +1104,7 @@ function ClubsWall({
   const cellW = (availW - (cols - 1) * gap) / cols;
   const cellH = (heroH - chromeH - (rows - 1) * gap) / rows;
   const cell = Math.max(46, Math.min(cellW, cellH, 150));
-  const logoSize = Math.round(cell * 0.74);
+  const logoSize = Math.round(cell * 0.92);
 
   // Count line: e.g. "72 Clubs Confirmed" — emphasise the last word in accent.
   const note = (state.clubsNote.trim() || `${total} Clubs Confirmed`).trim();
@@ -1176,12 +1176,8 @@ function ClubTile({
       style={{
         width: size,
         height: size,
-        borderRadius: Math.round(size * 0.16),
-        background: "rgba(245,247,251,0.96)",
-        boxShadow: "0 6px 16px -9px rgba(0,0,0,0.7)",
         display: "grid",
         placeItems: "center",
-        padding: Math.round(size * 0.12),
       }}
     >
       {src ? (
@@ -1189,15 +1185,22 @@ function ClubTile({
         <img
           src={src}
           alt=""
-          style={{ width: logoSize, height: logoSize, objectFit: "contain" }}
+          style={{
+            width: logoSize,
+            height: logoSize,
+            objectFit: "contain",
+            // A soft shadow lifts the mark off the background — no boxed tile.
+            filter: "drop-shadow(0 3px 7px rgba(0,0,0,0.5))",
+          }}
         />
       ) : (
         <span
           style={{
             fontFamily: DISPLAY,
             fontSize: Math.round(size * 0.34),
-            color: "#0d1830",
+            color: INK,
             letterSpacing: "0.02em",
+            textShadow: "0 2px 6px rgba(0,0,0,0.5)",
           }}
         >
           {clubInitials(club.name)}
