@@ -40,6 +40,7 @@ export function GraphicCanvas({
   event,
   backgrounds,
   clubs,
+  eventClubs = [],
   clubLogo,
   state,
   today,
@@ -47,6 +48,8 @@ export function GraphicCanvas({
   event: EventBrand;
   backgrounds: BackgroundData[];
   clubs: ClubData[];
+  /** The event's own clubs — used by the "Committed Clubs" logo wall. */
+  eventClubs?: ClubData[];
   clubLogo: string | null;
   state: GraphicState;
   today: string | null;
@@ -203,7 +206,8 @@ export function GraphicCanvas({
         >
           {state.template !== "were-in" &&
             state.template !== "bracket" &&
-            state.template !== "announcement" && (
+            state.template !== "announcement" &&
+            state.template !== "clubs" && (
               <ClubEyebrow initials={initials} club={club} red={RED} logo={clubLogo} />
             )}
           <TemplateBody
@@ -216,6 +220,7 @@ export function GraphicCanvas({
             club={club}
             initials={initials}
             clubs={clubs}
+            eventClubs={eventClubs}
             eventLogo={eventLogoSrc}
           />
         </div>
@@ -708,6 +713,7 @@ function TemplateBody({
   club,
   initials,
   clubs,
+  eventClubs,
   eventLogo,
 }: {
   state: GraphicState;
@@ -719,6 +725,7 @@ function TemplateBody({
   club: string;
   initials: string;
   clubs: ClubData[];
+  eventClubs: ClubData[];
   eventLogo: string | null;
 }) {
   switch (state.template) {
@@ -1029,9 +1036,175 @@ function TemplateBody({
       );
     }
 
+    case "clubs":
+      return <ClubsWall state={state} eventClubs={eventClubs} red={red} />;
+
     default:
       return null;
   }
+}
+
+/* ------------------------------ clubs wall ------------------------------- */
+
+/** Proxy external http(s) images same-origin so they display AND export. */
+function proxyImg(u: string | null): string | null {
+  if (!u) return null;
+  return /^https?:\/\//i.test(u) ? `/api/bg?u=${encodeURIComponent(u)}` : u;
+}
+
+/** Unique clubs by name; when a name repeats, keep the one that has a logo. */
+function dedupeClubs(list: ClubData[]): ClubData[] {
+  const seen = new Map<string, ClubData>();
+  for (const c of list) {
+    const k = c.name.trim().toLowerCase();
+    if (!k) continue;
+    const existing = seen.get(k);
+    if (!existing || (!existing.logoUrl && c.logoUrl)) seen.set(k, c);
+  }
+  return [...seen.values()];
+}
+
+/** Column count that keeps the wall balanced as the club list grows. */
+function colsFor(n: number): number {
+  if (n <= 4) return Math.max(1, n);
+  if (n <= 12) return 4;
+  if (n <= 24) return 6;
+  if (n <= 40) return 7;
+  if (n <= 56) return 8;
+  return 9;
+}
+
+function ClubsWall({
+  state,
+  eventClubs,
+  red,
+}: {
+  state: GraphicState;
+  eventClubs: ClubData[];
+  red: string;
+}) {
+  const square = state.format === "square";
+  const all = dedupeClubs(eventClubs);
+  const total = all.length;
+  const maxCells = square ? 42 : state.format === "story" ? 110 : 77;
+  const shown = all.slice(0, maxCells);
+
+  const cols = colsFor(shown.length);
+  const rows = Math.max(1, Math.ceil(shown.length / cols));
+  const gap = 12;
+
+  // Size each tile to fit BOTH the width and the leftover vertical room, so the
+  // wall never overflows regardless of format or how many clubs there are.
+  const pad = square ? 66 : 76;
+  const canvasH = square ? 1080 : state.format === "story" ? 1920 : 1350;
+  const availW = 1080 - pad * 2;
+  const heroH = canvasH - pad * 2 - 60; // matches the hero wrapper's paddingY
+  const headlineH = square ? 84 : 98;
+  const chromeH = headlineH + 30 + 30 + 66; // headline + gaps + count pill
+  const cellW = (availW - (cols - 1) * gap) / cols;
+  const cellH = (heroH - chromeH - (rows - 1) * gap) / rows;
+  const cell = Math.max(46, Math.min(cellW, cellH, 150));
+  const logoSize = Math.round(cell * 0.74);
+
+  // Count line: e.g. "72 Clubs Confirmed" — emphasise the last word in accent.
+  const note = (state.clubsNote.trim() || `${total} Clubs Confirmed`).trim();
+  const parts = note.split(/\s+/);
+  const tail = parts.length > 1 ? parts.pop()! : "";
+  const head = parts.join(" ");
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        textAlign: "center",
+        gap: 30,
+        width: "100%",
+      }}
+    >
+      <h1 style={{ ...headline, fontSize: square ? 84 : 98 }}>
+        {state.clubsHeadline || "Committed Clubs"}
+      </h1>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${cols}, ${cell}px)`,
+          gap,
+          justifyContent: "center",
+        }}
+      >
+        {shown.map((c, i) => (
+          <ClubTile key={c.id || i} club={c} size={cell} logoSize={logoSize} />
+        ))}
+      </div>
+
+      <div
+        style={{
+          fontFamily: COND,
+          fontWeight: 700,
+          fontSize: square ? 28 : 32,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          color: INK,
+          background: "rgba(6,10,18,0.55)",
+          border: "1.5px solid rgba(255,255,255,0.16)",
+          borderRadius: 999,
+          padding: "13px 30px",
+        }}
+      >
+        {head}
+        {tail && <span style={{ color: red }}> {tail}</span>}
+      </div>
+    </div>
+  );
+}
+
+function ClubTile({
+  club,
+  size,
+  logoSize,
+}: {
+  club: ClubData;
+  size: number;
+  logoSize: number;
+}) {
+  const src = proxyImg(club.logoUrl);
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: Math.round(size * 0.16),
+        background: "rgba(245,247,251,0.96)",
+        boxShadow: "0 6px 16px -9px rgba(0,0,0,0.7)",
+        display: "grid",
+        placeItems: "center",
+        padding: Math.round(size * 0.12),
+      }}
+    >
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt=""
+          style={{ width: logoSize, height: logoSize, objectFit: "contain" }}
+        />
+      ) : (
+        <span
+          style={{
+            fontFamily: DISPLAY,
+            fontSize: Math.round(size * 0.34),
+            color: "#0d1830",
+            letterSpacing: "0.02em",
+          }}
+        >
+          {clubInitials(club.name)}
+        </span>
+      )}
+    </div>
+  );
 }
 
 function ScheduleRow({

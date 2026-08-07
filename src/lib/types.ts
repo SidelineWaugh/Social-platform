@@ -6,7 +6,8 @@ export type TemplateId =
   | "schedule"
   | "result"
   | "countdown"
-  | "announcement";
+  | "announcement"
+  | "clubs";
 
 export type FormatId = "portrait" | "square" | "story";
 
@@ -114,4 +115,8 @@ export interface GraphicState {
   announceHeadline: string; // "Registration Open"
   announceSubtext: string; // optional tagline
   announceBigLogo: boolean; // hero the tournament logo, blown up
+
+  // committed clubs (logo wall)
+  clubsHeadline: string; // "Committed Clubs"
+  clubsNote: string; // count line override; blank = auto "N Clubs Confirmed"
 }

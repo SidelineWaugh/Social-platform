@@ -97,6 +97,8 @@ export function Studio({
     announceHeadline: "Registration Open",
     announceSubtext: "",
     announceBigLogo: true,
+    clubsHeadline: "Committed Clubs",
+    clubsNote: "",
   }));
 
   const [today, setToday] = useState<string | null>(null);
@@ -174,6 +176,7 @@ export function Studio({
             event={event}
             backgrounds={backgrounds}
             clubs={logoIndex}
+            eventClubs={clubs}
             clubLogo={clubLogo}
             state={state}
             today={today}

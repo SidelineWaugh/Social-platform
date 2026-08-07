@@ -502,6 +502,31 @@ function DetailsSection({ state, update, clubs, event }: SectionProps) {
             </p>
           </>
         )}
+
+        {state.template === "clubs" && (
+          <>
+            <Field label="Headline">
+              <input
+                className={inputClass}
+                placeholder="Committed Clubs"
+                value={state.clubsHeadline}
+                onChange={(e) => update({ clubsHeadline: e.target.value })}
+              />
+            </Field>
+            <Field label="Count line (optional)">
+              <input
+                className={inputClass}
+                placeholder="e.g. 70+ Clubs Confirmed"
+                value={state.clubsNote}
+                onChange={(e) => update({ clubsNote: e.target.value })}
+              />
+            </Field>
+            <p className="-mt-1 text-xs text-ink-faint">
+              Shows every club (with its logo) added to this event in Admin.
+              Leave the count blank to auto-fill the total.
+            </p>
+          </>
+        )}
       </div>
     </Section>
   );
