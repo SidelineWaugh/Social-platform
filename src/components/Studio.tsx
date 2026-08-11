@@ -24,6 +24,29 @@ import type {
   TemplateId,
 } from "@/lib/types";
 
+/**
+ * Resolve once every <img> inside `node` has actually loaded and decoded, so a
+ * capture won't race an image that's still fetching. Failed images resolve too
+ * (we don't want one bad logo to block the whole export) and we cap the wait so
+ * a hung request can't stall the download forever.
+ */
+async function waitForImages(node: HTMLElement): Promise<void> {
+  const imgs = Array.from(node.querySelectorAll("img"));
+  await Promise.all(
+    imgs.map((img) => {
+      const done =
+        img.complete && img.naturalWidth > 0
+          ? img.decode().catch(() => undefined)
+          : new Promise<void>((resolve) => {
+              img.addEventListener("load", () => resolve(), { once: true });
+              img.addEventListener("error", () => resolve(), { once: true });
+            });
+      const timeout = new Promise<void>((resolve) => setTimeout(resolve, 4000));
+      return Promise.race([done, timeout]);
+    }),
+  );
+}
+
 export function Studio({
   event,
   clubs,
@@ -73,6 +96,9 @@ export function Studio({
     bracketTeams: bracketSource.slice(0, 8).map((o) => o.name),
     announceHeadline: "Registration Open",
     announceSubtext: "",
+    announceBigLogo: true,
+    clubsHeadline: "Committed Clubs",
+    clubsNote: "",
   }));
 
   const [today, setToday] = useState<string | null>(null);
@@ -94,13 +120,31 @@ export function Studio({
     if (!node) return;
     setDownloading(true);
     try {
+      // Make sure fonts AND every image (club/event logos, proxied photos) are
+      // fully decoded before capture — html-to-image renders blank or throws if
+      // an <img> isn't ready. We intentionally do NOT cache-bust: the images are
+      // already loaded and cacheable (data URLs, or same-origin /api/bg with an
+      // immutable cache header), so reusing them avoids a second network fetch
+      // that could fail mid-export.
       await document.fonts?.ready;
-      const dataUrl = await toPng(node, {
-        width: fmt.width,
-        height: fmt.height,
-        pixelRatio: 1,
-        cacheBust: true,
-      });
+      await waitForImages(node);
+
+      const opts = { width: fmt.width, height: fmt.height, pixelRatio: 1 };
+      // html-to-image can miss a resource on its first pass; retry a couple of
+      // times before surfacing an error.
+      let dataUrl = "";
+      let lastErr: unknown;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          dataUrl = await toPng(node, opts);
+          if (dataUrl && dataUrl.length > 64) break;
+        } catch (e) {
+          lastErr = e;
+          await new Promise((r) => setTimeout(r, 150));
+        }
+      }
+      if (!dataUrl) throw lastErr ?? new Error("export produced no data");
+
       const slug = (state.clubName || "club")
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
@@ -132,6 +176,7 @@ export function Studio({
             event={event}
             backgrounds={backgrounds}
             clubs={logoIndex}
+            eventClubs={clubs}
             clubLogo={clubLogo}
             state={state}
             today={today}

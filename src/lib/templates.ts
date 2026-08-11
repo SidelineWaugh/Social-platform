@@ -16,6 +16,7 @@ export const TEMPLATES: TemplateMeta[] = [
   { id: "result", label: "Result", emoji: "📊", blurb: "Post the final score" },
   { id: "countdown", label: "Countdown", emoji: "⏳", blurb: "Days to kickoff" },
   { id: "announcement", label: "Event", emoji: "📣", blurb: "Announce the event" },
+  { id: "clubs", label: "Clubs", emoji: "🛡️", blurb: "Committed clubs wall" },
 ];
 
 export const TEMPLATE_MAP: Record<TemplateId, TemplateMeta> = Object.fromEntries(

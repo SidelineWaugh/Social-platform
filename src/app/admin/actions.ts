@@ -13,6 +13,7 @@ import {
 } from "@/lib/auth";
 import { TEMPLATES } from "@/lib/templates";
 import { BRAND_STYLES } from "@/lib/brandBg";
+import { isTheme } from "@/lib/themes";
 import { extractBrandColors, type BrandColors } from "@/lib/extractColors";
 
 const VALID_TEMPLATES = new Set(TEMPLATES.map((t) => t.id));
@@ -216,6 +217,10 @@ export async function updateEventAction(formData: FormData) {
       organizer: str(formData, "organizer") || "Sideline",
       brandColor: str(formData, "brandColor") || "#e83a48",
       brandColor2: str(formData, "brandColor2") || null,
+      theme: (() => {
+        const t = str(formData, "theme");
+        return isTheme(t) ? t : "classic";
+      })(),
       startDate: startRaw ? new Date(startRaw + "T00:00:00Z") : null,
       enabledTemplates: templates.length ? templates : undefined,
       published: formData.get("published") === "on",

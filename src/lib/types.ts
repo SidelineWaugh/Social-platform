@@ -6,9 +6,25 @@ export type TemplateId =
   | "schedule"
   | "result"
   | "countdown"
-  | "announcement";
+  | "announcement"
+  | "clubs";
 
 export type FormatId = "portrait" | "square" | "story";
+
+/** A per-event chrome look; see lib/themes.ts for the concrete definitions. */
+export type ThemeKey =
+  | "classic"
+  | "broadcast"
+  | "crest"
+  | "kit"
+  | "stadium"
+  | "minimal"
+  | "terrace"
+  | "wire"
+  | "editorial"
+  | "chalk"
+  | "pitch"
+  | "anthem";
 
 export interface Club {
   id: string;
@@ -28,6 +44,7 @@ export interface EventBrand {
   logoUrl: string | null;
   venue: string | null;
   startDateIso: string | null; // yyyy-mm-dd, for the countdown default
+  theme: ThemeKey;
   enabledTemplates: TemplateId[];
 }
 
@@ -97,4 +114,9 @@ export interface GraphicState {
   // announcement (event-level)
   announceHeadline: string; // "Registration Open"
   announceSubtext: string; // optional tagline
+  announceBigLogo: boolean; // hero the tournament logo, blown up
+
+  // committed clubs (logo wall)
+  clubsHeadline: string; // "Committed Clubs"
+  clubsNote: string; // count line override; blank = auto "N Clubs Confirmed"
 }

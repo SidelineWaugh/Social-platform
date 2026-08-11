@@ -8,6 +8,13 @@ import type {
 import { FORMAT_MAP } from "@/lib/formats";
 import { clubInitials, findClubLogo } from "@/lib/clubs";
 import { brandBackground, usesLogoWatermark } from "@/lib/brandBg";
+import {
+  resolveTheme,
+  FONT_FAMILY,
+  DISPLAY_META,
+  type ChipToken,
+  type Theme,
+} from "@/lib/themes";
 
 function InlineLogo({ src, size }: { src: string | null; size: number }) {
   if (!src) return null;
@@ -33,6 +40,7 @@ export function GraphicCanvas({
   event,
   backgrounds,
   clubs,
+  eventClubs = [],
   clubLogo,
   state,
   today,
@@ -40,6 +48,8 @@ export function GraphicCanvas({
   event: EventBrand;
   backgrounds: BackgroundData[];
   clubs: ClubData[];
+  /** The event's own clubs — used by the "Committed Clubs" logo wall. */
+  eventClubs?: ClubData[];
   clubLogo: string | null;
   state: GraphicState;
   today: string | null;
@@ -51,6 +61,24 @@ export function GraphicCanvas({
   // primary for events with no accent set, preserving the original look.
   const RED = event.brandColor2 || event.brandColor;
   const fmt = FORMAT_MAP[state.format];
+  // The event's chosen Theme drives the whole "chrome" — typography, wording
+  // position, frame, kicker, footer, chip shape, glow and texture — all still
+  // drawn in the brand colours.
+  const theme = resolveTheme(event.theme);
+  const dmeta = DISPLAY_META[theme.type.display];
+  // Theme typography is applied by overriding the font CSS variables (and a few
+  // headline tuning vars) on this canvas subtree, so every descendant that
+  // references them re-fonts at once — no per-element threading required.
+  const fontVars = {
+    ["--font-display"]: FONT_FAMILY[theme.type.display],
+    ["--font-cond"]: FONT_FAMILY[theme.type.label],
+    ["--hl-weight"]: String(dmeta.weight),
+    ["--hl-lead"]: String(dmeta.lead),
+    ["--hl-space"]: dmeta.space,
+  } as CSSProperties;
+  // Where the hero wording sits between the fixed kicker (top) and footer.
+  const heroJustify =
+    theme.anchor === "top" ? "flex-start" : theme.anchor === "bottom" ? "flex-end" : "center";
 
   const bg = backgrounds.find((b) => b.id === state.backgroundId);
   const rawImage =
@@ -100,6 +128,7 @@ export function GraphicCanvas({
         background: imageUrl ? "#0b1020" : gradient,
         color: INK,
         fontFamily: SANS,
+        ...fontVars,
       }}
     >
       {imageUrl && (
@@ -137,20 +166,13 @@ export function GraphicCanvas({
 
       {/* Legibility scrim */}
       <div style={{ position: "absolute", inset: 0, background: scrim }} />
-      {/* Soft brand glow */}
-      <div
-        style={{
-          position: "absolute",
-          left: -160,
-          bottom: -160,
-          width: 620,
-          height: 620,
-          borderRadius: "50%",
-          background: `radial-gradient(circle, ${hexToRgba(RED, 0.28)} 0%, ${hexToRgba(RED, 0)} 68%)`,
-        }}
-      />
+      {/* Theme brand glow (placement varies by theme) */}
+      <ThemeGlow theme={theme} red={RED} />
+      {/* Theme full-bleed texture (e.g. Kit pinstripes) */}
+      <ThemeOverlay theme={theme} red={RED} />
 
-      {/* Content */}
+      {/* Content: kicker pinned top, footer pinned bottom, hero anchored in
+          the space between per the theme (top / centre / bottom). */}
       <div
         style={{
           position: "absolute",
@@ -158,53 +180,35 @@ export function GraphicCanvas({
           padding: pad,
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
         }}
       >
-        {/* Top kicker */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <span style={{ width: 30, height: 6, background: RED, borderRadius: 2 }} />
-            <span
-              style={{
-                fontFamily: COND,
-                fontWeight: 700,
-                fontSize: 25,
-                letterSpacing: "0.16em",
-                textTransform: "uppercase",
-              }}
-            >
-              {event.name}
-            </span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-            <span
-              style={{
-                fontFamily: COND,
-                fontWeight: 600,
-                fontSize: 23,
-                letterSpacing: "0.22em",
-                color: MUTED,
-              }}
-            >
-              {event.season}
-            </span>
-            {eventLogoSrc && state.template !== "announcement" && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={eventLogoSrc}
-                alt=""
-                style={{ height: 220, width: "auto", maxWidth: 480, objectFit: "contain" }}
-              />
-            )}
-          </div>
-        </div>
+        {/* Top kicker (marker treatment varies by theme) */}
+        <Kicker
+          theme={theme}
+          event={event}
+          red={RED}
+          showLogo={Boolean(eventLogoSrc) && state.template !== "announcement"}
+          eventLogo={eventLogoSrc}
+        />
 
         {/* Hero */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 30 }}>
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: heroJustify,
+            gap: 30,
+            paddingTop: 30,
+            paddingBottom: 30,
+          }}
+        >
           {state.template !== "were-in" &&
             state.template !== "bracket" &&
-            state.template !== "announcement" && (
+            state.template !== "announcement" &&
+            state.template !== "clubs" &&
+            state.template !== "countdown" && (
               <ClubEyebrow initials={initials} club={club} red={RED} logo={clubLogo} />
             )}
           <TemplateBody
@@ -212,50 +216,352 @@ export function GraphicCanvas({
             today={today}
             event={event}
             red={RED}
+            chip={theme.chip}
             logo={clubLogo}
             club={club}
             initials={initials}
             clubs={clubs}
+            eventClubs={eventClubs}
             eventLogo={eventLogoSrc}
           />
         </div>
 
-        {/* Footer */}
+        {/* Footer (divider treatment varies by theme) */}
+        <Footer theme={theme} event={event} red={RED} />
+      </div>
+
+      {/* Theme frame sits above content so its border reads as a crisp edge */}
+      <ThemeFrame theme={theme} red={RED} />
+    </div>
+  );
+}
+
+/* ------------------------------ theme chrome ----------------------------- */
+
+function ThemeGlow({ theme, red }: { theme: Theme; red: string }) {
+  const orb = (s: CSSProperties) => (
+    <div style={{ position: "absolute", borderRadius: "50%", ...s }} />
+  );
+  const bottomLeft: CSSProperties = {
+    left: -160,
+    bottom: -160,
+    width: 620,
+    height: 620,
+    background: `radial-gradient(circle, ${hexToRgba(red, 0.28)} 0%, ${hexToRgba(red, 0)} 68%)`,
+  };
+  const topRight: CSSProperties = {
+    right: -180,
+    top: -180,
+    width: 560,
+    height: 560,
+    background: `radial-gradient(circle, ${hexToRgba(red, 0.22)} 0%, ${hexToRgba(red, 0)} 68%)`,
+  };
+  const topCentre: CSSProperties = {
+    left: "50%",
+    top: -300,
+    marginLeft: -380,
+    width: 760,
+    height: 620,
+    background: `radial-gradient(circle, ${hexToRgba(red, 0.2)} 0%, ${hexToRgba(red, 0)} 66%)`,
+  };
+  switch (theme.glow) {
+    case "none":
+      return null;
+    case "top":
+      return orb(topCentre);
+    case "split":
+      return (
+        <>
+          {orb(bottomLeft)}
+          {orb(topRight)}
+        </>
+      );
+    case "corner":
+    default:
+      return orb(bottomLeft);
+  }
+}
+
+function ThemeOverlay({ theme, red }: { theme: Theme; red: string }) {
+  if (theme.overlay === "pinstripe") {
+    return (
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          background: `repeating-linear-gradient(45deg, ${hexToRgba(red, 0.07)} 0 2px, transparent 2px 24px)`,
+        }}
+      />
+    );
+  }
+  if (theme.overlay === "grid") {
+    // A faint pitch/board grid drawn from the accent colour.
+    const line = hexToRgba(red, 0.06);
+    return (
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          backgroundImage: `linear-gradient(${line} 1px, transparent 1px), linear-gradient(90deg, ${line} 1px, transparent 1px)`,
+          backgroundSize: "72px 72px",
+        }}
+      />
+    );
+  }
+  return null;
+}
+
+function ThemeFrame({ theme, red }: { theme: Theme; red: string }) {
+  if (theme.frame === "inset") {
+    return (
+      <>
         <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            borderTop: "2px solid rgba(255,255,255,0.14)",
-            paddingTop: 22,
+            position: "absolute",
+            inset: 26,
+            border: `2px solid ${hexToRgba(red, 0.55)}`,
+            borderRadius: 6,
+            pointerEvents: "none",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            inset: 34,
+            border: "1px solid rgba(255,255,255,0.16)",
+            borderRadius: 3,
+            pointerEvents: "none",
+          }}
+        />
+      </>
+    );
+  }
+  if (theme.frame === "brackets") {
+    const len = 120;
+    const th = 9;
+    const off = 30;
+    const bar = (s: CSSProperties, key: string) => (
+      <span key={key} style={{ position: "absolute", background: red, ...s }} />
+    );
+    return (
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+        {bar({ left: off, top: off, width: len, height: th }, "tl-h")}
+        {bar({ left: off, top: off, width: th, height: len }, "tl-v")}
+        {bar({ right: off, top: off, width: len, height: th }, "tr-h")}
+        {bar({ right: off, top: off, width: th, height: len }, "tr-v")}
+        {bar({ left: off, bottom: off, width: len, height: th }, "bl-h")}
+        {bar({ left: off, bottom: off, width: th, height: len }, "bl-v")}
+        {bar({ right: off, bottom: off, width: len, height: th }, "br-h")}
+        {bar({ right: off, bottom: off, width: th, height: len }, "br-v")}
+      </div>
+    );
+  }
+  if (theme.frame === "sidebar") {
+    // A single accent stripe down the left edge — poster spine.
+    return (
+      <span
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 14,
+          background: `linear-gradient(180deg, ${red} 0%, ${hexToRgba(red, 0.55)} 100%)`,
+          pointerEvents: "none",
+        }}
+      />
+    );
+  }
+  if (theme.frame === "rails") {
+    // Full-width accent rails top and bottom — broadcast strap.
+    const rail = (s: CSSProperties, key: string) => (
+      <span
+        key={key}
+        style={{ position: "absolute", left: 0, right: 0, height: 12, background: red, ...s }}
+      />
+    );
+    return (
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+        {rail({ top: 0 }, "top")}
+        {rail({ bottom: 0 }, "bottom")}
+      </div>
+    );
+  }
+  return null;
+}
+
+function Kicker({
+  theme,
+  event,
+  red,
+  showLogo,
+  eventLogo,
+}: {
+  theme: Theme;
+  event: EventBrand;
+  red: string;
+  showLogo: boolean;
+  eventLogo: string | null;
+}) {
+  const name: CSSProperties = {
+    fontFamily: COND,
+    fontWeight: 700,
+    fontSize: 25,
+    letterSpacing: "0.16em",
+    textTransform: "uppercase",
+  };
+  let left: React.ReactNode;
+  switch (theme.kicker) {
+    case "block":
+      left = (
+        <span
+          style={{
+            ...name,
+            color: "#0b1020",
+            background: red,
+            borderRadius: 4,
+            padding: "9px 18px",
+            boxShadow: "0 6px 18px rgba(0,0,0,0.3)",
           }}
         >
+          {event.name}
+        </span>
+      );
+      break;
+    case "chevron":
+      left = (
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <span
             style={{
-              fontFamily: DISPLAY,
-              fontSize: 30,
-              letterSpacing: "0.02em",
-              color: RED,
-              fontStyle: "italic",
+              width: 24,
+              height: 26,
+              background: red,
+              clipPath: "polygon(0 0, 100% 50%, 0 100%)",
             }}
-          >
-            {event.hashtag}
-          </span>
-          <span
-            style={{
-              fontFamily: COND,
-              fontWeight: 600,
-              fontSize: 20,
-              letterSpacing: "0.2em",
-              textTransform: "uppercase",
-              color: MUTED,
-            }}
-          >
-            Powered by {event.organizer}
-          </span>
+          />
+          <span style={name}>{event.name}</span>
         </div>
+      );
+      break;
+    case "rule":
+      left = (
+        <span
+          style={{ ...name, paddingBottom: 9, borderBottom: `2px solid ${hexToRgba(red, 0.75)}` }}
+        >
+          {event.name}
+        </span>
+      );
+      break;
+    case "tall":
+      left = (
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <span style={{ width: 12, height: 42, background: red, borderRadius: 2 }} />
+          <span style={{ ...name, fontSize: 28 }}>{event.name}</span>
+        </div>
+      );
+      break;
+    case "bar":
+    default:
+      left = (
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <span style={{ width: 30, height: 6, background: red, borderRadius: 2 }} />
+          <span style={name}>{event.name}</span>
+        </div>
+      );
+  }
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      {left}
+      <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+        <span
+          style={{
+            fontFamily: COND,
+            fontWeight: 600,
+            fontSize: 23,
+            letterSpacing: "0.22em",
+            color: MUTED,
+          }}
+        >
+          {event.season}
+        </span>
+        {showLogo && eventLogo && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={eventLogo}
+            alt=""
+            style={{ height: 220, width: "auto", maxWidth: 480, objectFit: "contain" }}
+          />
+        )}
       </div>
     </div>
+  );
+}
+
+function Footer({
+  theme,
+  event,
+  red,
+}: {
+  theme: Theme;
+  event: EventBrand;
+  red: string;
+}) {
+  const isTicker = theme.footer === "ticker";
+  const borderTop = isTicker
+    ? "none"
+    : theme.footer === "solid"
+      ? `3px solid ${red}`
+      : theme.footer === "double"
+        ? `4px double ${hexToRgba(red, 0.75)}`
+        : "2px solid rgba(255,255,255,0.14)";
+  return (
+    <>
+      {isTicker && (
+        // A dashed accent measure above the footer — broadcast ticker.
+        <div
+          style={{
+            height: 8,
+            marginBottom: 18,
+            background: `repeating-linear-gradient(90deg, ${red} 0 18px, transparent 18px 30px)`,
+          }}
+        />
+      )}
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        borderTop,
+        paddingTop: isTicker ? 0 : 22,
+      }}
+    >
+      <span
+        style={{
+          fontFamily: DISPLAY,
+          fontSize: 30,
+          letterSpacing: "0.02em",
+          color: red,
+          fontStyle: "italic",
+        }}
+      >
+        {event.hashtag}
+      </span>
+      <span
+        style={{
+          fontFamily: COND,
+          fontWeight: 600,
+          fontSize: 20,
+          letterSpacing: "0.2em",
+          textTransform: "uppercase",
+          color: MUTED,
+        }}
+      >
+        Powered by {event.organizer}
+      </span>
+    </div>
+    </>
   );
 }
 
@@ -325,8 +631,11 @@ function ClubEyebrow({
 
 const headline: CSSProperties = {
   fontFamily: DISPLAY,
-  lineHeight: 0.86,
-  letterSpacing: "0.005em",
+  // Weight / leading / tracking come from the theme's display face (set as CSS
+  // vars on the canvas root); fallbacks reproduce the original Anton tuning.
+  fontWeight: "var(--hl-weight, 400)" as unknown as number,
+  lineHeight: "var(--hl-lead, 0.86)" as unknown as number,
+  letterSpacing: "var(--hl-space, 0.005em)",
   textTransform: "uppercase",
   margin: 0,
 };
@@ -340,7 +649,40 @@ const subline: CSSProperties = {
   color: MUTED,
 };
 
-function Chip({ children, red }: { children: React.ReactNode; red: string }) {
+/** Theme-specific shape overrides layered on top of the base chip style. */
+function chipShape(chip: ChipToken, red: string): CSSProperties {
+  switch (chip) {
+    case "square":
+      return { borderRadius: 6 };
+    case "cut":
+      return {
+        borderRadius: 0,
+        clipPath:
+          "polygon(11px 0, 100% 0, 100% calc(100% - 11px), calc(100% - 11px) 100%, 0 100%, 0 11px)",
+      };
+    case "line":
+      return {
+        borderRadius: 0,
+        background: "transparent",
+        border: "none",
+        borderBottom: `3px solid ${hexToRgba(red, 0.8)}`,
+        padding: "6px 4px",
+      };
+    case "pill":
+    default:
+      return { borderRadius: 999 };
+  }
+}
+
+function Chip({
+  children,
+  red,
+  chip = "pill",
+}: {
+  children: React.ReactNode;
+  red: string;
+  chip?: ChipToken;
+}) {
   return (
     <span
       style={{
@@ -353,8 +695,8 @@ function Chip({ children, red }: { children: React.ReactNode; red: string }) {
         color: INK,
         background: hexToRgba(red, 0.16),
         border: `1.5px solid ${hexToRgba(red, 0.55)}`,
-        borderRadius: 999,
         padding: "10px 22px",
+        ...chipShape(chip, red),
       }}
     >
       {children}
@@ -367,20 +709,24 @@ function TemplateBody({
   today,
   event,
   red,
+  chip,
   logo,
   club,
   initials,
   clubs,
+  eventClubs,
   eventLogo,
 }: {
   state: GraphicState;
   today: string | null;
   event: EventBrand;
   red: string;
+  chip: ChipToken;
   logo: string | null;
   club: string;
   initials: string;
   clubs: ClubData[];
+  eventClubs: ClubData[];
   eventLogo: string | null;
 }) {
   switch (state.template) {
@@ -393,6 +739,9 @@ function TemplateBody({
             alignItems: "center",
             textAlign: "center",
             gap: 22,
+            // Nudge the crest + wording up slightly from dead-centre so it sits
+            // above the visual middle — reads better with a photo background.
+            transform: "translateY(-46px)",
           }}
         >
           {logo ? (
@@ -441,7 +790,7 @@ function TemplateBody({
           <div style={subline}>Officially headed to the {event.shortName}</div>
           {state.ageGroup && (
             <div>
-              <Chip red={red}>{state.ageGroup}</Chip>
+              <Chip red={red} chip={chip}>{state.ageGroup}</Chip>
             </div>
           )}
         </div>
@@ -478,9 +827,9 @@ function TemplateBody({
             <span>{state.opponent || "Opponent"}</span>
           </div>
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-            {state.kickoff && <Chip red={red}>{state.kickoff}</Chip>}
-            {state.field && <Chip red={red}>{state.field}</Chip>}
-            {state.ageGroup && <Chip red={red}>{state.ageGroup}</Chip>}
+            {state.kickoff && <Chip red={red} chip={chip}>{state.kickoff}</Chip>}
+            {state.field && <Chip red={red} chip={chip}>{state.field}</Chip>}
+            {state.ageGroup && <Chip red={red} chip={chip}>{state.ageGroup}</Chip>}
           </div>
         </div>
       );
@@ -639,7 +988,12 @@ function TemplateBody({
       );
     }
 
-    case "announcement":
+    case "announcement": {
+      const square = state.format === "square";
+      // When the toggle is on and the event has a logo, the tournament logo is
+      // the hero — blown up large, with the text event-name suppressed (the mark
+      // carries the identity). Otherwise fall back to the wordmark layout.
+      const bigLogo = state.announceBigLogo && Boolean(eventLogo);
       return (
         <div
           style={{
@@ -656,20 +1010,20 @@ function TemplateBody({
               src={eventLogo}
               alt=""
               style={{
-                maxWidth: 580,
-                maxHeight: state.format === "square" ? 250 : 330,
+                maxWidth: bigLogo ? (square ? 760 : 880) : 580,
+                maxHeight: bigLogo ? (square ? 620 : 760) : square ? 250 : 330,
                 objectFit: "contain",
                 marginBottom: 6,
-                filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.55))",
+                filter: "drop-shadow(0 12px 34px rgba(0,0,0,0.6))",
               }}
             />
           )}
           <div style={{ ...subline, color: red, fontWeight: 700, fontSize: 34 }}>
             {state.announceHeadline || "Save The Date"}
           </div>
-          <h1 style={{ ...headline, fontSize: state.format === "square" ? 92 : 108 }}>
-            {event.name}
-          </h1>
+          {!bigLogo && (
+            <h1 style={{ ...headline, fontSize: square ? 92 : 108 }}>{event.name}</h1>
+          )}
           {state.announceSubtext && <div style={subline}>{state.announceSubtext}</div>}
           <div
             style={{
@@ -679,15 +1033,187 @@ function TemplateBody({
               justifyContent: "center",
             }}
           >
-            {event.startDateIso && <Chip red={red}>{formatDate(event.startDateIso)}</Chip>}
-            {event.venue && <Chip red={red}>{event.venue}</Chip>}
+            {event.startDateIso && <Chip red={red} chip={chip}>{formatDate(event.startDateIso)}</Chip>}
+            {event.venue && <Chip red={red} chip={chip}>{event.venue}</Chip>}
           </div>
         </div>
       );
+    }
+
+    case "clubs":
+      return <ClubsWall state={state} eventClubs={eventClubs} red={red} />;
 
     default:
       return null;
   }
+}
+
+/* ------------------------------ clubs wall ------------------------------- */
+
+/** Proxy external http(s) images same-origin so they display AND export. */
+function proxyImg(u: string | null): string | null {
+  if (!u) return null;
+  return /^https?:\/\//i.test(u) ? `/api/bg?u=${encodeURIComponent(u)}` : u;
+}
+
+/** Unique clubs by name; when a name repeats, keep the one that has a logo. */
+function dedupeClubs(list: ClubData[]): ClubData[] {
+  const seen = new Map<string, ClubData>();
+  for (const c of list) {
+    const k = c.name.trim().toLowerCase();
+    if (!k) continue;
+    const existing = seen.get(k);
+    if (!existing || (!existing.logoUrl && c.logoUrl)) seen.set(k, c);
+  }
+  return [...seen.values()];
+}
+
+/** Column count that keeps the wall balanced as the club list grows. */
+function colsFor(n: number): number {
+  if (n <= 4) return Math.max(1, n);
+  if (n <= 12) return 4;
+  if (n <= 24) return 6;
+  if (n <= 40) return 7;
+  if (n <= 56) return 8;
+  return 9;
+}
+
+function ClubsWall({
+  state,
+  eventClubs,
+  red,
+}: {
+  state: GraphicState;
+  eventClubs: ClubData[];
+  red: string;
+}) {
+  const square = state.format === "square";
+  const all = dedupeClubs(eventClubs);
+  const maxCells = square ? 42 : state.format === "story" ? 110 : 77;
+  const shown = all.slice(0, maxCells);
+
+  const cols = colsFor(shown.length);
+  const rows = Math.max(1, Math.ceil(shown.length / cols));
+  const gap = 12;
+
+  // Optional count line (e.g. "70+ Clubs Confirmed"); blank hides it entirely.
+  // The last word is emphasised in the accent colour.
+  const note = state.clubsNote.trim();
+  const parts = note.split(/\s+/);
+  const tail = parts.length > 1 ? parts.pop()! : "";
+  const head = parts.join(" ");
+
+  // Size each tile to fit BOTH the width and the leftover vertical room, so the
+  // wall never overflows regardless of format or how many clubs there are.
+  const pad = square ? 66 : 76;
+  const canvasH = square ? 1080 : state.format === "story" ? 1920 : 1350;
+  const availW = 1080 - pad * 2;
+  const heroH = canvasH - pad * 2 - 60; // matches the hero wrapper's paddingY
+  const headlineH = square ? 84 : 98;
+  const chromeH = headlineH + 30 + (note ? 30 + 66 : 0); // headline + gaps + pill
+  const cellW = (availW - (cols - 1) * gap) / cols;
+  const cellH = (heroH - chromeH - (rows - 1) * gap) / rows;
+  const cell = Math.max(46, Math.min(cellW, cellH, 150));
+  const logoSize = Math.round(cell * 0.92);
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        textAlign: "center",
+        gap: 30,
+        width: "100%",
+      }}
+    >
+      <h1 style={{ ...headline, fontSize: square ? 84 : 98 }}>
+        {state.clubsHeadline || "Committed Clubs"}
+      </h1>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${cols}, ${cell}px)`,
+          gap,
+          justifyContent: "center",
+        }}
+      >
+        {shown.map((c, i) => (
+          <ClubTile key={c.id || i} club={c} size={cell} logoSize={logoSize} />
+        ))}
+      </div>
+
+      {note && (
+        <div
+          style={{
+            fontFamily: COND,
+            fontWeight: 700,
+            fontSize: square ? 28 : 32,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            color: INK,
+            background: "rgba(6,10,18,0.55)",
+            border: "1.5px solid rgba(255,255,255,0.16)",
+            borderRadius: 999,
+            padding: "13px 30px",
+          }}
+        >
+          {head}
+          {tail && <span style={{ color: red }}> {tail}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClubTile({
+  club,
+  size,
+  logoSize,
+}: {
+  club: ClubData;
+  size: number;
+  logoSize: number;
+}) {
+  const src = proxyImg(club.logoUrl);
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        display: "grid",
+        placeItems: "center",
+      }}
+    >
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt=""
+          style={{
+            width: logoSize,
+            height: logoSize,
+            objectFit: "contain",
+            // A soft shadow lifts the mark off the background — no boxed tile.
+            filter: "drop-shadow(0 3px 7px rgba(0,0,0,0.5))",
+          }}
+        />
+      ) : (
+        <span
+          style={{
+            fontFamily: DISPLAY,
+            fontSize: Math.round(size * 0.34),
+            color: INK,
+            letterSpacing: "0.02em",
+            textShadow: "0 2px 6px rgba(0,0,0,0.5)",
+          }}
+        >
+          {clubInitials(club.name)}
+        </span>
+      )}
+    </div>
+  );
 }
 
 function ScheduleRow({

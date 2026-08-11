@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
@@ -5,6 +6,7 @@ import { TEMPLATES } from "@/lib/templates";
 import { clubInitials } from "@/lib/clubs";
 import { ImageUploadForm } from "@/components/admin/ImageUploadForm";
 import { brandBackground } from "@/lib/brandBg";
+import { THEMES, FONT_FAMILY, DISPLAY_META, type Theme } from "@/lib/themes";
 import {
   updateEventAction,
   setEventLogoAction,
@@ -159,6 +161,44 @@ export default async function EventEditor({
               Used by the Brand Kit backgrounds to match a host club&rsquo;s look.
             </span>
           </label>
+
+          <div className="sm:col-span-2">
+            <span className={label}>Theme</span>
+            <p className="mb-2.5 text-[11px] text-ink-faint">
+              A head-to-toe signature look for every graphic — frame, header,
+              footer, chips and glow. Recolours from the brand colours above;
+              backgrounds stay separately choosable in the studio.
+            </p>
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+              {THEMES.map((t) => (
+                <label key={t.key} className="group cursor-pointer">
+                  <input
+                    type="radio"
+                    name="theme"
+                    value={t.key}
+                    defaultChecked={event.theme === t.key}
+                    className="peer sr-only"
+                  />
+                  <div className="overflow-hidden rounded-lg border border-line transition group-hover:border-line-strong peer-checked:border-brand peer-checked:ring-2 peer-checked:ring-brand/30">
+                    <ThemePreviewMini
+                      theme={t}
+                      primary={event.brandColor}
+                      accent={event.brandColor2 ?? event.brandColor}
+                    />
+                    <div className="bg-input px-2.5 py-1.5">
+                      <div className="font-cond text-sm font-bold uppercase tracking-wide text-ink">
+                        {t.label}
+                      </div>
+                      <div className="mt-0.5 text-[11px] leading-snug text-ink-muted">
+                        {t.blurb}
+                      </div>
+                    </div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
           <div className="sm:col-span-2">
             <span className={label}>Enabled templates</span>
             <div className="flex flex-wrap gap-2">
@@ -585,5 +625,304 @@ export default async function EventEditor({
         </form>
       </section>
     </div>
+  );
+}
+
+/* ------------------------- theme picker preview -------------------------- */
+
+/** rgba() from a hex string + alpha, for the mini previews. */
+function pvAlpha(hex: string, a: number): string {
+  let h = hex.replace("#", "").trim();
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  if (h.length !== 6) return `rgba(232,58,72,${a})`;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+/**
+ * A small, faithful preview of a theme's chrome — the same marker / chip /
+ * footer / frame signals GraphicCanvas draws, in the event's own colours, so
+ * an admin can read each look at a glance without opening the studio.
+ */
+function ThemePreviewMini({
+  theme,
+  primary,
+  accent,
+}: {
+  theme: Theme;
+  primary: string;
+  accent: string;
+}) {
+  const ghost = "rgba(255,255,255,0.5)";
+  const dmeta = DISPLAY_META[theme.type.display];
+  // Override the font vars on this preview so the marker, headline and chip
+  // text all render in the theme's actual faces.
+  const fontVars = {
+    ["--font-display"]: FONT_FAMILY[theme.type.display],
+    ["--font-cond"]: FONT_FAMILY[theme.type.label],
+  } as CSSProperties;
+  const labelText: CSSProperties = { fontFamily: "var(--font-cond)" };
+
+  let marker: React.ReactNode;
+  switch (theme.kicker) {
+    case "block":
+      marker = (
+        <span
+          style={{
+            ...labelText,
+            background: accent,
+            color: "#0b1020",
+            fontSize: 6.5,
+            fontWeight: 700,
+            padding: "2px 5px",
+            borderRadius: 2,
+            letterSpacing: "0.08em",
+          }}
+        >
+          EVENT
+        </span>
+      );
+      break;
+    case "chevron":
+      marker = (
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+          <span
+            style={{ width: 7, height: 8, background: accent, clipPath: "polygon(0 0,100% 50%,0 100%)" }}
+          />
+          <span style={{ ...labelText, fontSize: 6.5, fontWeight: 700, letterSpacing: "0.08em", color: "#e7ecf7" }}>
+            EVENT
+          </span>
+        </span>
+      );
+      break;
+    case "rule":
+      marker = (
+        <span
+          style={{
+            ...labelText,
+            display: "inline-block",
+            fontSize: 6.5,
+            fontWeight: 700,
+            letterSpacing: "0.08em",
+            color: "#e7ecf7",
+            paddingBottom: 3,
+            borderBottom: `2px solid ${pvAlpha(accent, 0.85)}`,
+          }}
+        >
+          EVENT
+        </span>
+      );
+      break;
+    case "tall":
+      marker = (
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+          <span style={{ width: 4, height: 13, background: accent, borderRadius: 1 }} />
+          <span style={{ ...labelText, fontSize: 6.5, fontWeight: 700, letterSpacing: "0.08em", color: "#e7ecf7" }}>
+            EVENT
+          </span>
+        </span>
+      );
+      break;
+    case "bar":
+    default:
+      marker = (
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+          <span style={{ width: 12, height: 3, background: accent, borderRadius: 1 }} />
+          <span style={{ ...labelText, fontSize: 6.5, fontWeight: 700, letterSpacing: "0.08em", color: "#e7ecf7" }}>
+            EVENT
+          </span>
+        </span>
+      );
+  }
+
+  const chipShape: CSSProperties =
+    theme.chip === "square"
+      ? { borderRadius: 2 }
+      : theme.chip === "cut"
+        ? {
+            borderRadius: 0,
+            clipPath:
+              "polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px)",
+          }
+        : theme.chip === "line"
+          ? {
+              borderRadius: 0,
+              background: "transparent",
+              border: "none",
+              borderBottom: `2px solid ${pvAlpha(accent, 0.85)}`,
+              padding: "1px 1px",
+            }
+          : { borderRadius: 999 };
+
+  const heroJustify =
+    theme.anchor === "top" ? "flex-start" : theme.anchor === "bottom" ? "flex-end" : "center";
+
+  const footerBorder =
+    theme.footer === "solid"
+      ? `2px solid ${accent}`
+      : theme.footer === "double"
+        ? `3px double ${pvAlpha(accent, 0.85)}`
+        : theme.footer === "ticker"
+          ? "none"
+          : "1px solid rgba(255,255,255,0.2)";
+
+  return (
+    <div
+      style={{
+        ...fontVars,
+        position: "relative",
+        height: 104,
+        padding: 11,
+        display: "flex",
+        flexDirection: "column",
+        background: brandBackground("deep", primary, accent),
+        overflow: "hidden",
+      }}
+    >
+      {theme.overlay === "pinstripe" && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            pointerEvents: "none",
+            background: `repeating-linear-gradient(45deg, ${pvAlpha(accent, 0.09)} 0 2px, transparent 2px 12px)`,
+          }}
+        />
+      )}
+      {theme.overlay === "grid" && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            pointerEvents: "none",
+            backgroundImage: `linear-gradient(${pvAlpha(accent, 0.08)} 1px, transparent 1px), linear-gradient(90deg, ${pvAlpha(accent, 0.08)} 1px, transparent 1px)`,
+            backgroundSize: "16px 16px",
+          }}
+        />
+      )}
+
+      <div style={{ position: "relative" }}>{marker}</div>
+
+      <div
+        style={{
+          position: "relative",
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: heroJustify,
+          gap: 3,
+          padding: "5px 0",
+        }}
+      >
+        <span
+          style={{
+            fontFamily: "var(--font-display)",
+            fontWeight: dmeta.weight,
+            fontSize: 21,
+            lineHeight: dmeta.lead,
+            letterSpacing: dmeta.space,
+            textTransform: "uppercase",
+            color: "#f7f9ff",
+          }}
+        >
+          Matchday
+        </span>
+        <span
+          style={{
+            ...labelText,
+            alignSelf: "flex-start",
+            fontSize: 6,
+            fontWeight: 700,
+            letterSpacing: "0.06em",
+            color: "#f3f5fb",
+            padding: "2px 6px",
+            background: theme.chip === "line" ? "transparent" : pvAlpha(accent, 0.16),
+            border: theme.chip === "line" ? "none" : `1px solid ${pvAlpha(accent, 0.55)}`,
+            ...chipShape,
+          }}
+        >
+          U14
+        </span>
+      </div>
+
+      {theme.footer === "ticker" && (
+        <span
+          style={{
+            position: "relative",
+            height: 4,
+            marginBottom: 4,
+            background: `repeating-linear-gradient(90deg, ${accent} 0 8px, transparent 8px 14px)`,
+          }}
+        />
+      )}
+      <div
+        style={{
+          position: "relative",
+          borderTop: footerBorder,
+          paddingTop: theme.footer === "ticker" ? 0 : 5,
+          display: "flex",
+          justifyContent: "space-between",
+        }}
+      >
+        <span style={{ width: 34, height: 5, background: pvAlpha(accent, 0.9), borderRadius: 1 }} />
+        <span style={{ width: 22, height: 5, background: ghost, borderRadius: 1 }} />
+      </div>
+
+      {theme.frame === "inset" && (
+        <span
+          style={{
+            position: "absolute",
+            inset: 5,
+            border: `1px solid ${pvAlpha(accent, 0.6)}`,
+            borderRadius: 3,
+            pointerEvents: "none",
+          }}
+        />
+      )}
+      {theme.frame === "sidebar" && (
+        <span
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 5,
+            background: `linear-gradient(180deg, ${accent}, ${pvAlpha(accent, 0.55)})`,
+            pointerEvents: "none",
+          }}
+        />
+      )}
+      {theme.frame === "rails" && (
+        <>
+          <span style={{ position: "absolute", left: 0, right: 0, top: 0, height: 4, background: accent }} />
+          <span style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 4, background: accent }} />
+        </>
+      )}
+      {theme.frame === "brackets" && <MiniBrackets accent={accent} />}
+    </div>
+  );
+}
+
+function MiniBrackets({ accent }: { accent: string }) {
+  const len = 16;
+  const th = 3;
+  const off = 5;
+  const bar = (s: CSSProperties, key: string) => (
+    <span key={key} style={{ position: "absolute", background: accent, ...s }} />
+  );
+  return (
+    <span style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+      {bar({ left: off, top: off, width: len, height: th }, "tl-h")}
+      {bar({ left: off, top: off, width: th, height: len }, "tl-v")}
+      {bar({ right: off, top: off, width: len, height: th }, "tr-h")}
+      {bar({ right: off, top: off, width: th, height: len }, "tr-v")}
+      {bar({ left: off, bottom: off, width: len, height: th }, "bl-h")}
+      {bar({ left: off, bottom: off, width: th, height: len }, "bl-v")}
+      {bar({ right: off, bottom: off, width: len, height: th }, "br-h")}
+      {bar({ right: off, bottom: off, width: th, height: len }, "br-v")}
+    </span>
   );
 }
