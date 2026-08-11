@@ -523,7 +523,7 @@ function DetailsSection({ state, update, clubs, event }: SectionProps) {
             </Field>
             <p className="-mt-1 text-xs text-ink-faint">
               Shows every club (with its logo) added to this event in Admin.
-              Leave the count blank to auto-fill the total.
+              Leave the count blank to hide it.
             </p>
           </>
         )}

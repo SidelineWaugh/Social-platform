@@ -207,7 +207,8 @@ export function GraphicCanvas({
           {state.template !== "were-in" &&
             state.template !== "bracket" &&
             state.template !== "announcement" &&
-            state.template !== "clubs" && (
+            state.template !== "clubs" &&
+            state.template !== "countdown" && (
               <ClubEyebrow initials={initials} club={club} red={RED} logo={clubLogo} />
             )}
           <TemplateBody
@@ -738,6 +739,9 @@ function TemplateBody({
             alignItems: "center",
             textAlign: "center",
             gap: 22,
+            // Nudge the crest + wording up slightly from dead-centre so it sits
+            // above the visual middle — reads better with a photo background.
+            transform: "translateY(-46px)",
           }}
         >
           {logo ? (
@@ -1085,13 +1089,19 @@ function ClubsWall({
 }) {
   const square = state.format === "square";
   const all = dedupeClubs(eventClubs);
-  const total = all.length;
   const maxCells = square ? 42 : state.format === "story" ? 110 : 77;
   const shown = all.slice(0, maxCells);
 
   const cols = colsFor(shown.length);
   const rows = Math.max(1, Math.ceil(shown.length / cols));
   const gap = 12;
+
+  // Optional count line (e.g. "70+ Clubs Confirmed"); blank hides it entirely.
+  // The last word is emphasised in the accent colour.
+  const note = state.clubsNote.trim();
+  const parts = note.split(/\s+/);
+  const tail = parts.length > 1 ? parts.pop()! : "";
+  const head = parts.join(" ");
 
   // Size each tile to fit BOTH the width and the leftover vertical room, so the
   // wall never overflows regardless of format or how many clubs there are.
@@ -1100,17 +1110,11 @@ function ClubsWall({
   const availW = 1080 - pad * 2;
   const heroH = canvasH - pad * 2 - 60; // matches the hero wrapper's paddingY
   const headlineH = square ? 84 : 98;
-  const chromeH = headlineH + 30 + 30 + 66; // headline + gaps + count pill
+  const chromeH = headlineH + 30 + (note ? 30 + 66 : 0); // headline + gaps + pill
   const cellW = (availW - (cols - 1) * gap) / cols;
   const cellH = (heroH - chromeH - (rows - 1) * gap) / rows;
   const cell = Math.max(46, Math.min(cellW, cellH, 150));
   const logoSize = Math.round(cell * 0.92);
-
-  // Count line: e.g. "72 Clubs Confirmed" — emphasise the last word in accent.
-  const note = (state.clubsNote.trim() || `${total} Clubs Confirmed`).trim();
-  const parts = note.split(/\s+/);
-  const tail = parts.length > 1 ? parts.pop()! : "";
-  const head = parts.join(" ");
 
   return (
     <div
@@ -1140,23 +1144,25 @@ function ClubsWall({
         ))}
       </div>
 
-      <div
-        style={{
-          fontFamily: COND,
-          fontWeight: 700,
-          fontSize: square ? 28 : 32,
-          letterSpacing: "0.14em",
-          textTransform: "uppercase",
-          color: INK,
-          background: "rgba(6,10,18,0.55)",
-          border: "1.5px solid rgba(255,255,255,0.16)",
-          borderRadius: 999,
-          padding: "13px 30px",
-        }}
-      >
-        {head}
-        {tail && <span style={{ color: red }}> {tail}</span>}
-      </div>
+      {note && (
+        <div
+          style={{
+            fontFamily: COND,
+            fontWeight: 700,
+            fontSize: square ? 28 : 32,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            color: INK,
+            background: "rgba(6,10,18,0.55)",
+            border: "1.5px solid rgba(255,255,255,0.16)",
+            borderRadius: 999,
+            padding: "13px 30px",
+          }}
+        >
+          {head}
+          {tail && <span style={{ color: red }}> {tail}</span>}
+        </div>
+      )}
     </div>
   );
 }
